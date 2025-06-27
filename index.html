@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이서네 부자되기</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="main.js" defer></script>
+</head>
+<body>
+
+    <div id="app">
+        <header>
+            <h1>이서네 부자되기</h1>
+        </header>
+
+        <main>
+            <section class="form-section">
+                <form id="exchange-form">
+                    <fieldset>
+                        <legend>새 환전 기록 추가</legend>
+
+                        <div class="form-group">
+                            <label for="target-currency">거래 통화</label>
+                            <select id="target-currency" name="target_currency">
+                                <option value="USD">USD - 미국 달러</option>
+                                <option value="JPY">JPY - 일본 엔</option>
+                                <option value="EUR">EUR - 유로</option>
+                            </select>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="transaction-type">거래 종류</label>
+                                <select id="transaction-type" name="type">
+                                    <option value="buy">외화 구매 (원화 → 외화)</option>
+                                    <option value="sell">외화 판매 (외화 → 원화)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="transaction-date">거래 날짜</label>
+                                <input type="date" id="transaction-date" name="date" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="foreign-amount">거래 외화 금액</label>
+                                <input type="number" id="foreign-amount" name="foreign_amount" step="0.01" placeholder="예: 100.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="exchange-rate">거래 환율</label>
+                                <input type="number" id="exchange-rate" name="exchange_rate" step="0.01" placeholder="예: 1320.30" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="base-amount">원화 환산 금액</label>
+                            <input type="number" id="base-amount" name="base_amount" placeholder="자동 계산 또는 직접 입력가능">
+                        </div>
+
+                        <div id="linked-buy-id-wrapper" class="form-group hidden">
+                            <label for="linked-buy-id">어떤 구매 건을 판매하시나요?</label>
+                            <select id="linked-buy-id" name="linked_buy_id">
+                                </select>
+                        </div>
+                        
+                        <!-- <div class="form-group">
+                            <label for="memo">메모</label>
+                            <textarea id="memo" name="memo" rows="2" placeholder="메모를 남겨주세요 (선택 사항)"></textarea>
+                        </div> -->
+
+                        <button type="submit">기록 저장</button>
+                    </fieldset>
+                </form>
+            </section>
+
+            <section class="dashboard-section">
+                <h2>요약 정보</h2>
+                <div class="dashboard-grid">
+                    <div class="dashboard-item">
+                        <h3>총 실현 손익</h3>
+                        <p id="total-pl">0 원</p>
+                    </div>
+                    <div class="dashboard-item">
+                        <h3>현재 보유 외화</h3>
+                        <div id="current-holdings">
+                            <p>-</p>
+                        </div>
+                    </div>
+                    <div class="dashboard-item">
+                        <h3>통화별 평균 매입가</h3>
+                        <div id="avg-buy-price">
+                            <p>-</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="list-section">
+                <h2>전체 기록 목록</h2>
+                    <table class="record-table">
+                        <thead>
+                            <tr>
+                                <th>거래구분</th>
+                                <th>거래시간</th>
+                                <th>외화구분</th>
+                                <th>외화금액</th>
+                                <th>거래환율</th>
+                                <th>원화환산금액</th>
+                                <th>손익</th>
+                                <th>관리</th> </tr>
+                        </thead>
+                        <tbody id="record-list-body"></tbody>
+                    </table>
+            </section>
+        </main>
+    </div>
+
+    <template id="record-row-template">
+        <tr>
+            <td class="record-type"></td>
+            <td class="record-date"></td>
+            <td class="record-currency"></td>
+            <td class="record-foreign-amount"></td>
+            <td class="record-rate"></td>
+            <td class="record-base-amount"></td>
+            <td class="record-pl"></td>
+            <td class="record-actions">
+                <button class="edit-btn" title="수정">✏️</button>
+                <button class="delete-btn" title="삭제">🗑️</button>
+            </td>
+        </tr>
+    </template>
+
+</body>
+</html>

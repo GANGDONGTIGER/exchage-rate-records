@@ -251,3 +251,51 @@ input[type=number] {
 .edit-btn:hover, .delete-btn:hover {
     transform: scale(1.2);
 }
+
+/* [추가] 반응형 테이블을 위한 컨테이너 */
+.table-container {
+    width: 100%;
+    overflow-x: auto; /* 내용이 넘칠 경우 가로 스크롤바를 생성 */
+    -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 효과 */
+}
+
+/* =================================== */
+/* 반응형 웹 디자인을 위한 미디어 쿼리 */
+/* =================================== */
+@media (max-width: 768px) {
+    #app {
+        margin: 20px auto;
+        padding: 15px;
+    }
+
+    /* 폼 그룹을 세로로 쌓이도록 변경 */
+    .form-group {
+        flex-direction: column; /* 가로 정렬에서 세로 정렬로 변경 */
+        align-items: flex-start; /* 왼쪽 정렬 */
+    }
+
+    .form-group label {
+        width: auto; /* 라벨의 고정 너비 해제 */
+        margin-bottom: 5px; /* 입력창과의 간격 */
+    }
+    
+    /* 한 줄에 2개 있던 폼 그룹도 세로로 쌓이도록 변경 */
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .form-row .form-group {
+        width: 100%;
+        margin-bottom: 15px; /* 각 그룹 사이에 간격 추가 */
+    }
+
+    .form-row .form-group label {
+        width: auto; /* 라벨 고정 너비 해제 */
+    }
+
+    /* 대시보드 아이템도 세로로 쌓이도록 */
+    .dashboard-grid {
+        flex-direction: column;
+    }
+}

@@ -9,6 +9,10 @@
     
 </head>
 <body>
+    
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+    </div>
 
     <div id="app">
         <header>
@@ -84,16 +88,23 @@
                         <p id="total-pl">0 원</p>
                     </div>
                     <div class="dashboard-item">
-                        <h3>현재 보유 외화</h3>
-                        <div id="current-holdings">
-                            <p>-</p>
+                        <h3>당월 누적 손익</h3>
+                        <p id="current-month-pl">0 원</p>
+                    </div>
+                    <div class="dashboard-item" id="monthly-pl-item">
+                        <h3>월별 손익 조회</h3>
+                        <div class="monthly-selector-container">
+                            <select id="monthly-pl-select"></select>
+                            <p id="monthly-pl-result">0 원</p>
                         </div>
                     </div>
                     <div class="dashboard-item">
+                        <h3>현재 보유 외화</h3>
+                        <div id="current-holdings"><p>-</p></div>
+                    </div>
+                    <div class="dashboard-item">
                         <h3>통화별 평균 매입가</h3>
-                        <div id="avg-buy-price">
-                            <p>-</p>
-                        </div>
+                        <div id="avg-buy-price"><p>-</p></div>
                     </div>
                 </div>
             </section>

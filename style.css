@@ -356,3 +356,22 @@ input[type=number] {
     min-width: 80px;
     text-align: right;
 }
+
+/* [추가] 라디오 버튼 그룹 스타일 */
+.radio-group {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* SW와 HR 사이 간격 */
+}
+
+.radio-group input[type="radio"] {
+    width: auto; /* 라디오 버튼은 자동 너비 */
+}
+
+/* 라디오 버튼 옆 라벨 스타일 */
+.radio-group label {
+    width: auto !important; /* 중요! form-group의 label 스타일 덮어쓰기 */
+    margin-bottom: 0 !important; /* 중요! form-group의 label 스타일 덮어쓰기 */
+    font-weight: normal;
+    cursor: pointer;
+}

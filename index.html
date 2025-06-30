@@ -26,6 +26,16 @@
                         <legend>새 환전 기록 추가</legend>
 
                         <div class="form-group">
+                            <label>거래자</label>
+                            <div class="radio-group">
+                                <input type="radio" id="trader-sw" name="trader" value="SW">
+                                <label for="trader-sw"><b>SW</b></label>
+                                <input type="radio" id="trader-hr" name="trader" value="HR">
+                                <label for="trader-hr"><b>HR</b></label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
                             <label for="target-currency">거래 통화</label>
                             <select id="target-currency" name="target_currency">
                                 <option value="USD">USD - 미국 달러</option>
@@ -38,8 +48,8 @@
                             <div class="form-group">
                                 <label for="transaction-type">거래 종류</label>
                                 <select id="transaction-type" name="type">
-                                    <option value="buy">외화 구매 (원화 → 외화)</option>
-                                    <option value="sell">외화 판매 (외화 → 원화)</option>
+                                    <option value="buy">외화 매수 (원화 → 외화)</option>
+                                    <option value="sell">외화 매도 (외화 → 원화)</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -65,7 +75,7 @@
                         </div>
 
                         <div id="linked-buy-id-wrapper" class="form-group hidden">
-                            <label for="linked-buy-id">어떤 구매 건을 판매하시나요?</label>
+                            <label for="linked-buy-id">어떤 매입 건을 매도하시나요?</label>
                             <select id="linked-buy-id" name="linked_buy_id">
                                 </select>
                         </div>
@@ -75,7 +85,7 @@
                             <textarea id="memo" name="memo" rows="2" placeholder="메모를 남겨주세요 (선택 사항)"></textarea>
                         </div> -->
 
-                        <button type="submit">기록 저장</button>
+                        <button type="submit">저장</button>
                     </fieldset>
                 </form>
             </section>
@@ -88,11 +98,11 @@
                         <p id="total-pl">0 원</p>
                     </div>
                     <div class="dashboard-item">
-                        <h3>당월 누적 손익</h3>
+                        <h3>당월 손익</h3>
                         <p id="current-month-pl">0 원</p>
                     </div>
                     <div class="dashboard-item" id="monthly-pl-item">
-                        <h3>월별 손익 조회</h3>
+                        <h3>월별 손익</h3>
                         <div class="monthly-selector-container">
                             <select id="monthly-pl-select"></select>
                             <p id="monthly-pl-result">0 원</p>
@@ -110,12 +120,13 @@
             </section>
 
             <section class="list-section">
-                <h2>전체 기록 목록</h2>
+                <h2>거래 히스토리</h2>
                 <div class="table-container">
                     <table class="record-table">
                         <thead>
                             <tr>
                                 <th>거래구분</th>
+                                <th>거래자</th>
                                 <th>거래시간</th>
                                 <th>외화구분</th>
                                 <th>외화금액</th>
@@ -134,6 +145,7 @@
     <template id="record-row-template">
         <tr>
             <td class="record-type"></td>
+            <td class="record-trader"></td>
             <td class="record-date"></td>
             <td class="record-currency"></td>
             <td class="record-foreign-amount"></td>

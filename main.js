@@ -255,15 +255,16 @@ function renderRecords(plMap = new Map(), soldBuyIds = new Set()) {
         // 5. 각 셀(td)을 찾아 데이터를 채워 넣습니다.
         const typeCell = row.querySelector('.record-type');
         if (record.type === 'buy') {
-            typeCell.textContent = '구매';
+            typeCell.textContent = '매수';
             typeCell.style.color = '#3498db';
         } else {
-            typeCell.textContent = '판매';
+            typeCell.textContent = '매도';
             typeCell.style.color = '#e74c3c';
         }
 
         // Google Sheets에서 넘어온 날짜 데이터 형식을 고려하여 'YYYY-MM-DD'로 자릅니다.
-        row.querySelector('.record-date').textContent = record.timestamp.toString().substring(0, 10);
+        row.querySelector('.record-trader').textContent = record.trader || '-'; // [추가]
+        row.querySelector('.record-date').textContent = record.timestamp;
         row.querySelector('.record-currency').textContent = record.target_currency;
 
         // 숫자 데이터는 toLocaleString()을 사용해 콤마를 추가하고 소수점 자리를 맞춥니다.
@@ -289,18 +290,30 @@ function renderRecords(plMap = new Map(), soldBuyIds = new Set()) {
     });
 }
 
-// ... updateAvailableBuyOptions, calculateBaseAmount, handleTransactionTypeChange 함수는 이전과 동일 ...
 function updateAvailableBuyOptions(soldBuyIds) {
-    const availableBuyRecords = records.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()));
+    // [추가] 현재 선택된 거래자를 확인합니다.
+    const selectedTrader = document.querySelector('input[name="trader"]:checked')?.value;
+
+    let availableBuyRecords = [];
+    // [수정] 거래자가 선택된 경우에만 필터링을 수행합니다.
+    if (selectedTrader) {
+        availableBuyRecords = records.filter(r => 
+            r.type === 'buy' &&                                     // '구매' 기록이면서
+            !soldBuyIds.has(r.id.toString()) &&                 // 아직 판매되지 않았고
+            r.trader === selectedTrader                         // 현재 선택된 거래자의 기록인 것
+        );
+    }
+
     linkedBuyIdSelect.innerHTML = '<option value="">-- 원본 구매 기록 선택 --</option>';
     availableBuyRecords.forEach(r => {
         const option = document.createElement('option');
         option.value = r.id;
-        const displayDate = r.timestamp.toString().substring(0, 10);
+        const displayDate = r.timestamp;
         option.textContent = `${displayDate} / ${r.target_currency} ${r.foreign_amount} (환율: ${r.exchange_rate})`;
         linkedBuyIdSelect.appendChild(option);
     });
 }
+
 function calculateBaseAmount() {
     const foreignAmount = parseFloat(foreignAmountInput.value);
     const exchangeRate = parseFloat(exchangeRateInput.value);
@@ -310,9 +323,14 @@ function calculateBaseAmount() {
         baseAmountInput.value = '';
     }
 }
+
 function handleTransactionTypeChange() {
     if (transactionTypeSelect.value === 'sell') {
         linkedBuyIdWrapper.classList.remove('hidden');
+        // [추가] '판매'를 선택하는 즉시, 현재 선택된 거래자를 기준으로 드롭다운 목록을 다시 만듭니다.
+        // calculateAnalytics는 soldBuyIds 최신 정보를 얻기 위해 필요합니다.
+        const analytics = calculateAnalytics(records);
+        updateAvailableBuyOptions(analytics.soldBuyIds);
     } else {
         linkedBuyIdWrapper.classList.add('hidden');
     }
@@ -335,6 +353,17 @@ exchangeRateInput.addEventListener('input', calculateBaseAmount);
 transactionTypeSelect.addEventListener('change', handleTransactionTypeChange);
 monthlyPlSelect.addEventListener('change', displaySelectedMonthlyPL); // [추가] 월별 손익 드롭다운 변경 이벤트
 
+// [추가] 거래자 라디오 버튼이 변경될 때 드롭다운 목록을 업데이트하는 이벤트 리스너
+document.querySelectorAll('input[name="trader"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        // 거래 종류가 '판매'일 때만 드롭다운 목록을 새로고침합니다.
+        if (transactionTypeSelect.value === 'sell') {
+            const analytics = calculateAnalytics(records);
+            updateAvailableBuyOptions(analytics.soldBuyIds);
+        }
+    });
+});
+
 // [수정 또는 확인] 테이블의 버튼 클릭을 처리하는 이벤트 위임
 recordListBody.addEventListener('click', function(event) {
     // 클릭된 요소가 버튼인지 확인하고, data-id 속성에서 레코드 ID를 가져옵니다.
@@ -350,13 +379,16 @@ recordListBody.addEventListener('click', function(event) {
         if (!recordToEdit) {
             alert('수정할 기록을 찾지 못했습니다.');
             return;
-        }
+        };
+        if (recordToEdit.trader) {
+            document.querySelector(`input[name="trader"][value="${recordToEdit.trader}"]`).checked = true;
+        };
 
         // 폼에 기존 데이터를 채워 넣습니다.
         targetCurrencySelect.value = recordToEdit.target_currency;
         transactionTypeSelect.value = recordToEdit.type;
         // Google Sheets에서 받은 날짜 데이터는 시간 정보까지 포함할 수 있으므로, 앞 10자리(YYYY-MM-DD)만 사용합니다.
-        transactionDateInput.value = recordToEdit.timestamp.toString().substring(0, 10);
+        transactionDateInput.value = recordToEdit.timestamp.toString();
         foreignAmountInput.value = recordToEdit.foreign_amount;
         exchangeRateInput.value = recordToEdit.exchange_rate;
         baseAmountInput.value = recordToEdit.base_amount;
@@ -422,9 +454,21 @@ form.addEventListener('submit', function(event) {
     const action = editMode.active ? 'update' : 'create';
     const recordId = editMode.active ? editMode.recordId : 't' + Date.now();
 
+    // [추가된 부분 시작] - 유효성 검사
+    const selectedTrader = document.querySelector('input[name="trader"]:checked');
+        if (!selectedTrader) {
+            alert('거래자를 선택해주세요.');
+            // 로딩 상태를 원상 복구하고 함수 실행을 중단
+            submitButton.disabled = false;
+            submitButton.textContent = editMode.active ? '수정 완료' : '기록 저장';
+            loadingOverlay.classList.add('hidden');
+            return;
+        };
+
     // 4. 폼에 입력된 값들을 기반으로 데이터 객체를 생성합니다.
     const recordData = {
         id: recordId,
+        trader: document.querySelector('input[name="trader"]:checked').value,
         type: transactionTypeSelect.value,
         timestamp: transactionDateInput.value,
         target_currency: targetCurrencySelect.value,
@@ -483,55 +527,7 @@ form.addEventListener('submit', function(event) {
 });
 
 
-// [추가] 테이블의 버튼 클릭을 처리하는 이벤트 위임
-recordListBody.addEventListener('click', function(event) {
-    const target = event.target;
-    const recordId = target.dataset.id;
 
-    if (!recordId) return;
-
-    if (target.classList.contains('edit-btn')) {
-        // 수정 버튼 클릭 시
-        const recordToEdit = records.find(r => r.id.toString() === recordId);
-        if (!recordToEdit) return;
-
-        // 폼에 데이터 채우기
-        targetCurrencySelect.value = recordToEdit.target_currency;
-        transactionTypeSelect.value = recordToEdit.type;
-        transactionDateInput.value = recordToEdit.timestamp.toString().substring(0, 10);
-        foreignAmountInput.value = recordToEdit.foreign_amount;
-        exchangeRateInput.value = recordToEdit.exchange_rate;
-        baseAmountInput.value = recordToEdit.base_amount;
-        handleTransactionTypeChange();
-        if (recordToEdit.type === 'sell') {
-            // 연결된 구매 ID를 선택 상태로 만들기 (시간이 좀 걸릴 수 있음)
-            setTimeout(() => { linkedBuyIdSelect.value = recordToEdit.linked_buy_id; }, 100);
-        }
-        
-        // 수정 모드로 변경
-        editMode = { active: true, recordId: recordId };
-        form.querySelector('button[type="submit"]').textContent = '수정 완료';
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // 화면 상단으로 스크롤
-    } else if (target.classList.contains('delete-btn')) {
-        // 삭제 버튼 클릭 시
-        if (!confirm("정말로 이 기록을 삭제하시겠습니까?")) return;
-        
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'delete', id: recordId }),
-        })
-        .then(response => response.json())
-        .then(result => {
-            if (result.status === 'success') {
-                records = records.filter(r => r.id.toString() !== result.id.toString());
-                calculateAndRenderAll();
-            } else {
-                throw new Error(result.message);
-            }
-        })
-        .catch(error => alert(`삭제에 실패했습니다: ${error.message}`));
-    }
-});
 
 // ---------------------------------
 // 5. 초기 실행

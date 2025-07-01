@@ -62,14 +62,19 @@ header h1 {
     width: 100%;
 }
 
+/* 폼 요소 공통 스타일 */
+input[type="text"], /* [변경] type="number"에서 "text"로 수정 */
 input[type="date"],
-input[type="number"],
 select,
 textarea {
+    width: 100%;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1em;
+    /* [추가] 높이를 통일시키는 핵심 속성들 */
+    height: 42px; /* 모든 요소의 높이를 42px로 강제 통일 */
+    vertical-align: middle; /* 세로 정렬 기준을 맞춤 */
 }
 
 textarea {

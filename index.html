@@ -61,17 +61,17 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="foreign-amount">거래 외화 금액</label>
-                                <input type="number" id="foreign-amount" name="foreign_amount" step="0.01" placeholder="예: 100.00" required>
+                                <input type="text" inputmode="decimal" id="foreign-amount" name="foreign_amount" placeholder="예: 100.00" required>
                             </div>
                             <div class="form-group">
                                 <label for="exchange-rate">거래 환율</label>
-                                <input type="number" id="exchange-rate" name="exchange_rate" step="0.01" placeholder="예: 1320.30" required>
+                                <input type="text" inputmode="decimal" id="exchange-rate" name="exchange_rate" placeholder="예: 1,320.30" required>
                             </div>
                         </div>
                         
                         <div class="form-group">
                             <label for="base-amount">원화 환산 금액</label>
-                            <input type="number" id="base-amount" name="base_amount" placeholder="자동 계산 또는 직접 입력가능">
+                            <input type="text" inputmode="decimal" id="base-amount" name="base_amount" placeholder="자동 계산 또는 직접 입력">
                         </div>
 
                         <div id="linked-buy-id-wrapper" class="form-group hidden">

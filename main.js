@@ -22,7 +22,6 @@ const currentMonthPlElement = document.getElementById('current-month-pl');
 const monthlyPlSelect = document.getElementById('monthly-pl-select');
 const monthlyPlResult = document.getElementById('monthly-pl-result');
 
-// [추가] 한도 대시보드 요소
 const dailyLimitSwFill = document.getElementById('daily-limit-sw-fill');
 const dailyLimitSwText = document.getElementById('daily-limit-sw-text');
 const dailyLimitHrFill = document.getElementById('daily-limit-hr-fill');
@@ -40,6 +39,7 @@ let records = [];
 let monthlyPlData = {};
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw0skZAuWgTMGOuTehPepXfIbUihjagRDQfTVaFHVjWbVC2JqRkTNNxGVtE9DMuaHi6cA/exec"; 
 let editMode = { active: false, recordId: null };
+
 
 // ---------------------------------
 // 3. 헬퍼(Helper) 함수
@@ -63,6 +63,7 @@ function unformatNumber(stringValue) {
     return stringValue.toString().replace(/,/g, '');
 }
 
+
 // ---------------------------------
 // 4. 핵심 기능 함수
 // ---------------------------------
@@ -76,8 +77,9 @@ function calculateAndRenderAll() {
 }
 
 function calculateAnalytics(records) {
-    // [수정] 한도 계산 로직 추가
-    let totalPL = 0; let currentMonthPL = 0; const monthlyPL = {};
+    let totalPL = 0;
+    let currentMonthPL = 0;
+    const monthlyPL = {};
     const plMap = new Map();
     const buyRecordMap = new Map(records.filter(r => r.type === 'buy').map(r => [r.id.toString(), r]));
     const soldBuyIds = new Set();
@@ -85,46 +87,35 @@ function calculateAnalytics(records) {
     const now = new Date();
     const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
-    // --- 한도 계산을 위한 시간 기준 설정 ---
-    // 일일 한도 기준: 오늘 오전 9시 ~ 내일 오전 8시 59분
     let dailyLimitStart = new Date(now);
-    if (now.getHours() < 9) { // 만약 현재 시간이 오전 9시 이전이면, 기준일은 어제
+    if (now.getHours() < 9) {
         dailyLimitStart.setDate(dailyLimitStart.getDate() - 1);
     }
     dailyLimitStart.setHours(9, 0, 0, 0);
     let dailyLimitEnd = new Date(dailyLimitStart);
     dailyLimitEnd.setDate(dailyLimitEnd.getDate() + 1);
 
-    // 월간 한도 기준: 이번 달 1일 오전 9시 ~ 다음 달 1일 오전 8시 59분
     let monthlyLimitStart = new Date(now.getFullYear(), now.getMonth(), 1, 9, 0, 0);
-    if (now.getDate() === 1 && now.getHours() < 9) { // 1일 9시 이전이면, 기준 월은 저번 달
+    if (now.getDate() === 1 && now.getHours() < 9) {
         monthlyLimitStart.setMonth(monthlyLimitStart.getMonth() - 1);
     }
     let monthlyLimitEnd = new Date(monthlyLimitStart);
     monthlyLimitEnd.setMonth(monthlyLimitEnd.getMonth() + 1);
 
-    const limitUsage = {
-        daily: { SW: 0, HR: 0 },
-        monthly: { SW: 0, HR: 0 }
-    };
+    const limitUsage = { daily: { SW: 0, HR: 0 }, monthly: { SW: 0, HR: 0 } };
 
-    // --- 모든 기록 순회 ---
     records.forEach(record => {
         const recordDate = new Date(record.timestamp);
 
-        // '구매' 기록일 경우 한도 계산
         if (record.type === 'buy' && record.trader) {
-            // 일일 한도 집계
             if (recordDate >= dailyLimitStart && recordDate < dailyLimitEnd) {
                 limitUsage.daily[record.trader] += record.base_amount;
             }
-            // 월간 한도 집계
             if (recordDate >= monthlyLimitStart && recordDate < monthlyLimitEnd) {
                 limitUsage.monthly[record.trader] += record.base_amount;
             }
         }
         
-        // '판매' 기록일 경우 손익 계산 (기존 로직)
         if (record.type === 'sell' && record.linked_buy_id) {
             const originalBuy = buyRecordMap.get(record.linked_buy_id.toString());
             if (originalBuy) {
@@ -141,19 +132,25 @@ function calculateAnalytics(records) {
         }
     });
 
-    // ... (보유 외화 및 평균 매입가 계산 로직은 이전과 동일) ...
-    const holdings = {}; const buyStats = {};
+    const holdings = {};
+    const buyStats = {};
     records.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString())).forEach(buyRecord => {
         const currency = buyRecord.target_currency;
-        if (!holdings[currency]) { holdings[currency] = 0; buyStats[currency] = { totalAmount: 0, totalCost: 0 }; }
+        if (!holdings[currency]) {
+            holdings[currency] = 0;
+            buyStats[currency] = { totalAmount: 0, totalCost: 0 };
+        }
         holdings[currency] += buyRecord.foreign_amount;
         buyStats[currency].totalAmount += buyRecord.foreign_amount;
         buyStats[currency].totalCost += buyRecord.base_amount;
     });
+
     const avgBuyPrices = {};
     for (const currency in buyStats) {
         let avgPrice = buyStats[currency].totalCost / buyStats[currency].totalAmount;
-        if (currency === 'JPY') { avgPrice = avgPrice * 100; }
+        if (currency === 'JPY') {
+            avgPrice = avgPrice * 100;
+        }
         avgBuyPrices[currency] = avgPrice;
     }
     
@@ -161,9 +158,6 @@ function calculateAnalytics(records) {
 }
 
 function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices, limitUsage }) {
-    // [수정] 한도 대시보드 업데이트 로직 추가
-    
-    // 기존 대시보드 업데이트
     totalPlElement.textContent = `${totalPL.toLocaleString()} 원`;
     totalPlElement.className = totalPL >= 0 ? 'profit' : 'loss';
     currentMonthPlElement.textContent = `${currentMonthPL.toLocaleString()} 원`;
@@ -172,27 +166,22 @@ function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices, limi
     currentHoldingsElement.innerHTML = holdingsHTML;
     const avgPricesHTML = Object.entries(avgBuyPrices).map(([currency, price]) => `<p>${currency}: ${formatNumber(Number(price).toFixed(2))} 원</p>`).join('') || '<p>-</p>';
     avgBuyPriceElement.innerHTML = avgPricesHTML;
-
-    // 신규 한도 대시보드 업데이트
+    
     const DAILY_MAX = 10000000;
     const MONTHLY_MAX = 100000000;
 
-    // 일일 한도 - SW
     let dailyPercentSw = (limitUsage.daily.SW / DAILY_MAX) * 100;
     dailyLimitSwFill.style.width = `${Math.min(dailyPercentSw, 100)}%`;
     dailyLimitSwText.textContent = `${limitUsage.daily.SW.toLocaleString()} / ${DAILY_MAX.toLocaleString()}`;
     
-    // 일일 한도 - HR
     let dailyPercentHr = (limitUsage.daily.HR / DAILY_MAX) * 100;
     dailyLimitHrFill.style.width = `${Math.min(dailyPercentHr, 100)}%`;
     dailyLimitHrText.textContent = `${limitUsage.daily.HR.toLocaleString()} / ${DAILY_MAX.toLocaleString()}`;
 
-    // 월간 한도 - SW
     let monthlyPercentSw = (limitUsage.monthly.SW / MONTHLY_MAX) * 100;
     monthlyLimitSwFill.style.width = `${Math.min(monthlyPercentSw, 100)}%`;
     monthlyLimitSwText.textContent = `${limitUsage.monthly.SW.toLocaleString()} / ${MONTHLY_MAX.toLocaleString()}`;
 
-    // 월간 한도 - HR
     let monthlyPercentHr = (limitUsage.monthly.HR / MONTHLY_MAX) * 100;
     monthlyLimitHrFill.style.width = `${Math.min(monthlyPercentHr, 100)}%`;
     monthlyLimitHrText.textContent = `${limitUsage.monthly.HR.toLocaleString()} / ${MONTHLY_MAX.toLocaleString()}`;
@@ -249,7 +238,7 @@ function renderRecords(plMap = new Map(), soldBuyIds = new Set()) {
             typeCell.style.color = '#e74c3c';
         }
         row.querySelector('.record-trader').textContent = record.trader || '-';
-        row.querySelector('.record-date').textContent = record.timestamp;
+        row.querySelector('.record-date').textContent = record.timestamp.substring(0, 10);
         row.querySelector('.record-currency').textContent = record.target_currency;
         row.querySelector('.record-foreign-amount').textContent = formatNumber(Number(record.foreign_amount).toFixed(2));
         row.querySelector('.record-rate').textContent = formatNumber(Number(record.exchange_rate).toFixed(2));
@@ -280,7 +269,7 @@ function updateAvailableBuyOptions(soldBuyIds) {
     availableBuyRecords.forEach(r => {
         const option = document.createElement('option');
         option.value = r.id;
-        const displayDate = r.timestamp;
+        const displayDate = r.timestamp.substring(0, 10);
         option.textContent = `${displayDate} / ${r.target_currency} ${r.foreign_amount} (환율: ${r.exchange_rate})`;
         linkedBuyIdSelect.appendChild(option);
     });
@@ -314,7 +303,7 @@ function handleTransactionTypeChange() {
 function resetFormToCreateMode() {
     form.reset();
     baseAmountInput.value = '';
-    transactionDateInput.value = getTodayString(); // 날짜 초기화 로직 추가
+    transactionDateInput.value = getTodayString();
     editMode = { active: false, recordId: null };
     form.querySelector('button[type="submit"]').textContent = '기록 저장';
     handleTransactionTypeChange();
@@ -363,7 +352,7 @@ recordListBody.addEventListener('click', function(event) {
         }
         targetCurrencySelect.value = recordToEdit.target_currency;
         transactionTypeSelect.value = recordToEdit.type;
-        transactionDateInput.value = recordToEdit.timestamp;
+        transactionDateInput.value = recordToEdit.timestamp.substring(0, 10);
         foreignAmountInput.value = formatNumber(recordToEdit.foreign_amount);
         exchangeRateInput.value = formatNumber(recordToEdit.exchange_rate);
         baseAmountInput.value = formatNumber(recordToEdit.base_amount);
@@ -412,11 +401,29 @@ form.addEventListener('submit', function(event) {
     const action = editMode.active ? 'update' : 'create';
     const recordId = editMode.active ? editMode.recordId : 't' + Date.now();
 
+    // '수정' 시에는 폼에 있는 날짜를 사용하고, '생성' 시에는 현재 시간을 사용합니다.
+    let timestamp;
+    if (action === 'update') {
+        const dateParts = transactionDateInput.value.split('-');
+        const now = new Date(); // 시간 정보를 가져오기 위해
+        const updatedTimestamp = new Date(
+            parseInt(dateParts[0]),
+            parseInt(dateParts[1]) - 1, // 월은 0부터 시작
+            parseInt(dateParts[2]),
+            now.getHours(),
+            now.getMinutes(),
+            now.getSeconds()
+        );
+        timestamp = updatedTimestamp.toISOString();
+    } else { // create
+        timestamp = new Date().toISOString();
+    }
+
     const recordData = {
         id: recordId,
         trader: selectedTrader.value,
         type: transactionTypeSelect.value,
-        timestamp: transactionDateInput.value,
+        timestamp: timestamp, // 수정된 타임스탬프 사용
         target_currency: targetCurrencySelect.value,
         foreign_amount: parseFloat(unformatNumber(foreignAmountInput.value)),
         exchange_rate: parseFloat(unformatNumber(exchangeRateInput.value)),

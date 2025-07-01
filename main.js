@@ -22,6 +22,17 @@ const currentMonthPlElement = document.getElementById('current-month-pl');
 const monthlyPlSelect = document.getElementById('monthly-pl-select');
 const monthlyPlResult = document.getElementById('monthly-pl-result');
 
+// [추가] 한도 대시보드 요소
+const dailyLimitSwFill = document.getElementById('daily-limit-sw-fill');
+const dailyLimitSwText = document.getElementById('daily-limit-sw-text');
+const dailyLimitHrFill = document.getElementById('daily-limit-hr-fill');
+const dailyLimitHrText = document.getElementById('daily-limit-hr-text');
+const monthlyLimitSwFill = document.getElementById('monthly-limit-sw-fill');
+const monthlyLimitSwText = document.getElementById('monthly-limit-sw-text');
+const monthlyLimitHrFill = document.getElementById('monthly-limit-hr-fill');
+const monthlyLimitHrText = document.getElementById('monthly-limit-hr-text');
+
+
 // ---------------------------------
 // 2. 전역 데이터 변수 및 상태
 // ---------------------------------
@@ -65,54 +76,94 @@ function calculateAndRenderAll() {
 }
 
 function calculateAnalytics(records) {
+    // [수정] 한도 계산 로직 추가
     let totalPL = 0; let currentMonthPL = 0; const monthlyPL = {};
     const plMap = new Map();
     const buyRecordMap = new Map(records.filter(r => r.type === 'buy').map(r => [r.id.toString(), r]));
     const soldBuyIds = new Set();
-    const today = new Date();
-    const currentYearMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    records.filter(r => r.type === 'sell' && r.linked_buy_id).forEach(sellRecord => {
-        const originalBuy = buyRecordMap.get(sellRecord.linked_buy_id.toString());
-        if (originalBuy) {
-            const profit = sellRecord.base_amount - originalBuy.base_amount;
-            totalPL += profit;
-            plMap.set(sellRecord.id.toString(), profit);
-            soldBuyIds.add(originalBuy.id.toString());
-            const sellDate = new Date(sellRecord.timestamp);
-            const sellYearMonth = `${sellDate.getFullYear()}-${String(sellDate.getMonth() + 1).padStart(2, '0')}`;
-            if (!monthlyPL[sellYearMonth]) { monthlyPL[sellYearMonth] = 0; }
-            monthlyPL[sellYearMonth] += profit;
-            if (sellYearMonth === currentYearMonth) { currentMonthPL += profit; }
+    
+    const now = new Date();
+    const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    // --- 한도 계산을 위한 시간 기준 설정 ---
+    // 일일 한도 기준: 오늘 오전 9시 ~ 내일 오전 8시 59분
+    let dailyLimitStart = new Date(now);
+    if (now.getHours() < 9) { // 만약 현재 시간이 오전 9시 이전이면, 기준일은 어제
+        dailyLimitStart.setDate(dailyLimitStart.getDate() - 1);
+    }
+    dailyLimitStart.setHours(9, 0, 0, 0);
+    let dailyLimitEnd = new Date(dailyLimitStart);
+    dailyLimitEnd.setDate(dailyLimitEnd.getDate() + 1);
+
+    // 월간 한도 기준: 이번 달 1일 오전 9시 ~ 다음 달 1일 오전 8시 59분
+    let monthlyLimitStart = new Date(now.getFullYear(), now.getMonth(), 1, 9, 0, 0);
+    if (now.getDate() === 1 && now.getHours() < 9) { // 1일 9시 이전이면, 기준 월은 저번 달
+        monthlyLimitStart.setMonth(monthlyLimitStart.getMonth() - 1);
+    }
+    let monthlyLimitEnd = new Date(monthlyLimitStart);
+    monthlyLimitEnd.setMonth(monthlyLimitEnd.getMonth() + 1);
+
+    const limitUsage = {
+        daily: { SW: 0, HR: 0 },
+        monthly: { SW: 0, HR: 0 }
+    };
+
+    // --- 모든 기록 순회 ---
+    records.forEach(record => {
+        const recordDate = new Date(record.timestamp);
+
+        // '구매' 기록일 경우 한도 계산
+        if (record.type === 'buy' && record.trader) {
+            // 일일 한도 집계
+            if (recordDate >= dailyLimitStart && recordDate < dailyLimitEnd) {
+                limitUsage.daily[record.trader] += record.base_amount;
+            }
+            // 월간 한도 집계
+            if (recordDate >= monthlyLimitStart && recordDate < monthlyLimitEnd) {
+                limitUsage.monthly[record.trader] += record.base_amount;
+            }
+        }
+        
+        // '판매' 기록일 경우 손익 계산 (기존 로직)
+        if (record.type === 'sell' && record.linked_buy_id) {
+            const originalBuy = buyRecordMap.get(record.linked_buy_id.toString());
+            if (originalBuy) {
+                const profit = record.base_amount - originalBuy.base_amount;
+                totalPL += profit;
+                plMap.set(record.id.toString(), profit);
+                soldBuyIds.add(originalBuy.id.toString());
+                const sellDate = new Date(record.timestamp);
+                const sellYearMonth = `${sellDate.getFullYear()}-${String(sellDate.getMonth() + 1).padStart(2, '0')}`;
+                if (!monthlyPL[sellYearMonth]) { monthlyPL[sellYearMonth] = 0; }
+                monthlyPL[sellYearMonth] += profit;
+                if (sellYearMonth === currentYearMonth) { currentMonthPL += profit; }
+            }
         }
     });
+
+    // ... (보유 외화 및 평균 매입가 계산 로직은 이전과 동일) ...
     const holdings = {}; const buyStats = {};
     records.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString())).forEach(buyRecord => {
         const currency = buyRecord.target_currency;
-        if (!holdings[currency]) {
-            holdings[currency] = 0;
-            buyStats[currency] = { totalAmount: 0, totalCost: 0 };
-        }
+        if (!holdings[currency]) { holdings[currency] = 0; buyStats[currency] = { totalAmount: 0, totalCost: 0 }; }
         holdings[currency] += buyRecord.foreign_amount;
         buyStats[currency].totalAmount += buyRecord.foreign_amount;
         buyStats[currency].totalCost += buyRecord.base_amount;
     });
-
     const avgBuyPrices = {};
     for (const currency in buyStats) {
         let avgPrice = buyStats[currency].totalCost / buyStats[currency].totalAmount;
-
-        // [수정됨] 만약 통화가 'JPY'라면, 100엔당 가격으로 환산하기 위해 100을 곱합니다.
-        if (currency === 'JPY') {
-            avgPrice = avgPrice * 100;
-        }
-
+        if (currency === 'JPY') { avgPrice = avgPrice * 100; }
         avgBuyPrices[currency] = avgPrice;
     }
     
-    return { totalPL, currentMonthPL, monthlyPL, plMap, holdings, avgBuyPrices, soldBuyIds };
+    return { totalPL, currentMonthPL, monthlyPL, plMap, holdings, avgBuyPrices, soldBuyIds, limitUsage };
 }
 
-function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices }) {
+function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices, limitUsage }) {
+    // [수정] 한도 대시보드 업데이트 로직 추가
+    
+    // 기존 대시보드 업데이트
     totalPlElement.textContent = `${totalPL.toLocaleString()} 원`;
     totalPlElement.className = totalPL >= 0 ? 'profit' : 'loss';
     currentMonthPlElement.textContent = `${currentMonthPL.toLocaleString()} 원`;
@@ -121,6 +172,30 @@ function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices }) {
     currentHoldingsElement.innerHTML = holdingsHTML;
     const avgPricesHTML = Object.entries(avgBuyPrices).map(([currency, price]) => `<p>${currency}: ${formatNumber(Number(price).toFixed(2))} 원</p>`).join('') || '<p>-</p>';
     avgBuyPriceElement.innerHTML = avgPricesHTML;
+
+    // 신규 한도 대시보드 업데이트
+    const DAILY_MAX = 10000000;
+    const MONTHLY_MAX = 100000000;
+
+    // 일일 한도 - SW
+    let dailyPercentSw = (limitUsage.daily.SW / DAILY_MAX) * 100;
+    dailyLimitSwFill.style.width = `${Math.min(dailyPercentSw, 100)}%`;
+    dailyLimitSwText.textContent = `${limitUsage.daily.SW.toLocaleString()} / ${DAILY_MAX.toLocaleString()}`;
+    
+    // 일일 한도 - HR
+    let dailyPercentHr = (limitUsage.daily.HR / DAILY_MAX) * 100;
+    dailyLimitHrFill.style.width = `${Math.min(dailyPercentHr, 100)}%`;
+    dailyLimitHrText.textContent = `${limitUsage.daily.HR.toLocaleString()} / ${DAILY_MAX.toLocaleString()}`;
+
+    // 월간 한도 - SW
+    let monthlyPercentSw = (limitUsage.monthly.SW / MONTHLY_MAX) * 100;
+    monthlyLimitSwFill.style.width = `${Math.min(monthlyPercentSw, 100)}%`;
+    monthlyLimitSwText.textContent = `${limitUsage.monthly.SW.toLocaleString()} / ${MONTHLY_MAX.toLocaleString()}`;
+
+    // 월간 한도 - HR
+    let monthlyPercentHr = (limitUsage.monthly.HR / MONTHLY_MAX) * 100;
+    monthlyLimitHrFill.style.width = `${Math.min(monthlyPercentHr, 100)}%`;
+    monthlyLimitHrText.textContent = `${limitUsage.monthly.HR.toLocaleString()} / ${MONTHLY_MAX.toLocaleString()}`;
 }
 
 function populateMonthSelector(monthlyData) {

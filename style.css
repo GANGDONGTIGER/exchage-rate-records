@@ -14,9 +14,9 @@ body {
 
 /* 전체 앱 레이아웃 */
 #app {
-    max-width: 1000px; /* 테이블이 넓으므로 최대 너비 증가 */
+    max-width: 1000px;
     margin: 40px auto;
-    padding: 20px 30px; /* 좌우 패딩 증가 */
+    padding: 20px 30px;
     background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -28,7 +28,7 @@ header h1 {
     margin-bottom: 30px;
 }
 
-/* 폼 섹션 스타일 (이전과 동일) */
+/* 폼 섹션 스타일 */
 .form-section fieldset {
     border: 1px solid #e0e0e0;
     border-radius: 5px;
@@ -63,7 +63,7 @@ header h1 {
 }
 
 /* 폼 요소 공통 스타일 */
-input[type="text"], /* [변경] type="number"에서 "text"로 수정 */
+input[type="text"],
 input[type="date"],
 select,
 textarea {
@@ -72,12 +72,12 @@ textarea {
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 1em;
-    /* [추가] 높이를 통일시키는 핵심 속성들 */
-    height: 42px; /* 모든 요소의 높이를 42px로 강제 통일 */
-    vertical-align: middle; /* 세로 정렬 기준을 맞춤 */
+    height: 42px;
+    vertical-align: middle;
 }
 
 textarea {
+    height: auto;
     resize: vertical;
 }
 
@@ -91,6 +91,7 @@ button[type="submit"] {
     border: none;
     border-radius: 4px;
     font-size: 1.1em;
+    height: 42px;
     cursor: pointer;
     transition: background-color 0.2s;
 }
@@ -119,8 +120,158 @@ input[type=number] {
     width: 120px; 
 }
 
+/* 라디오 버튼 그룹 스타일 */
+.radio-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.radio-group input[type="radio"] {
+    width: auto;
+    height: auto;
+    flex-grow: 0;
+}
+.radio-group label {
+    width: auto !important;
+    margin-bottom: 0 !important;
+    font-weight: normal;
+    cursor: pointer;
+}
 
-/* [수정] 목록 섹션 및 테이블 스타일 */
+/* 대시보드 섹션 스타일 */
+.dashboard-section {
+    margin-bottom: 40px;
+}
+.dashboard-section h2 {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eee;
+}
+.dashboard-grid {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.dashboard-item {
+    flex: 1;
+    min-width: 220px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+}
+.dashboard-item h3 {
+    font-size: 1em;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+/* [수정됨] 대시보드 값 부분 스타일 */
+.dashboard-item > p, 
+.dashboard-item > div {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* [추가됨] 중첩 적용을 막기 위해, 내부에 생성되는 p 태그는 폰트 크기를 리셋 */
+#current-holdings p,
+#avg-buy-price p {
+    font-size: 1em; /* 부모 크기(1.2em)의 1배수, 즉 동일 크기로 설정 */
+    font-weight: normal; /* 여러 줄일 경우를 대비해 일반 굵기 */
+    margin-bottom: 4px;
+}
+
+
+/* 월별 손익 조회 아이템 내부 스타일 */
+#monthly-pl-item h3 {
+    margin-bottom: 15px;
+}
+.monthly-selector-container {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+/* [수정됨] 월별 손익 조회 결과는 다시 굵게 처리 */
+.monthly-selector-container p {
+    text-align: left;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+/* 한도 현황 대시보드 스타일 */
+.limit-dashboard-section {
+    margin-bottom: 40px;
+}
+.limit-dashboard-section h2 {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eee;
+}
+.limit-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.limit-item {
+    flex: 1;
+    min-width: 300px;
+    background-color: #fdfdfd;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+}
+.limit-item h3 {
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 20px;
+    text-align: center;
+}
+.limit-tracker {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.tracker-label {
+    width: 40px;
+    font-weight: bold;
+}
+.progress-bar-container {
+    flex-grow: 1;
+    height: 28px;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    position: relative;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background-color: #3498db;
+    border-radius: 5px;
+    transition: width 0.5s ease-in-out;
+}
+.progress-bar-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+#daily-limit-hr-fill,
+#monthly-limit-hr-fill {
+    background-color: #f7a8b8;
+}
+
+
+/* 목록 테이블 스타일 */
 .list-section {
     margin-top: 40px;
 }
@@ -129,120 +280,63 @@ input[type=number] {
     padding-bottom: 10px;
     margin-bottom: 20px;
 }
-
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 .record-table {
     width: 100%;
-    border-collapse: collapse; /* 테두리 한 줄로 합치기 */
+    border-collapse: collapse;
     font-size: 0.95em;
 }
-
 .record-table thead {
     background-color: #f2f2f2;
 }
-
 .record-table th,
 .record-table td {
     padding: 12px 15px;
     border-bottom: 1px solid #ddd;
     text-align: left;
+    white-space: nowrap;
 }
-
 .record-table th {
     font-weight: 600;
     color: #555;
 }
-
-/* 숫자 관련 컬럼은 오른쪽 정렬 */
 .record-table .record-foreign-amount,
 .record-table .record-rate,
-.record-table .record-base-amount {
+.record-table .record-base-amount,
+.record-table .record-pl {
     text-align: right;
 }
-
-/* 짝수 행에 배경색을 주어 가독성 향상 (지브라 스트라이프) */
 .record-table tbody tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
-
-/* [추가] 요소를 숨기기 위한 Helper 클래스 */
-.hidden {
-    display: none !important;
-}
-
-/* [추가] 대시보드 섹션 스타일 */
-.dashboard-section {
-    margin-bottom: 40px;
-}
-
-.dashboard-section h2 {
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #eee;
-}
-
-.dashboard-grid {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap; /* 화면이 좁아지면 아래로 떨어지도록 설정 */
-}
-
-.dashboard-item {
-    flex: 1; /* 아이템들이 공간을 균등하게 차지 */
-    min-width: 220px; /* 아이템의 최소 너비 */
-    background-color: #f9f9f9;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 20px;
-}
-
-.dashboard-item h3 {
-    font-size: 1em;
-    color: #555;
-    margin-bottom: 10px;
-}
-
-.dashboard-item p, .dashboard-item div {
-    font-size: 1.2em;
-    font-weight: bold;
-    color: #2c3e50;
-}
-
-/* [추가] 손익(P/L) 컬럼 스타일 */
-.record-pl {
-    font-weight: bold;
-    text-align: right;
-}
-
-.profit {
-    color: #e74c3c; /* 수익은 빨간색 */
-}
-
-.loss {
-    color: #3498db; /* 손실은 파란색 */
-}
-
-/* [추가] 완료된 거래 행 스타일 */
+/* 완료된 거래 행 스타일 */
 .record-completed td {
-    text-decoration: line-through; /* 사선 */
-    color: #95a5a6; /* 흐린 회색 텍스트 */
+    text-decoration: line-through;
+    color: #95a5a6;
 }
-
-/* 완료된 행의 손익 컬럼은 원래 색상을 유지하도록 재정의 */
 .record-completed td.profit,
 .record-completed td.loss {
-    color: #e74c3c; /* 수익 색상 유지 */
+    color: #e74c3c;
 }
-
 .record-completed td.loss {
-    color: #3498db; /* 손실 색상 유지 */
+    color: #3498db;
+}
+.profit {
+    color: #e74c3c;
+}
+.loss {
+    color: #3498db;
 }
 
-/* [추가] 관리 버튼 스타일 */
+/* 관리 버튼 스타일 */
 .record-actions {
     text-align: center;
 }
-
 .edit-btn, .delete-btn {
     background: none;
     border: none;
@@ -252,131 +346,68 @@ input[type=number] {
     margin: 0 5px;
     transition: transform 0.2s;
 }
-
 .edit-btn:hover, .delete-btn:hover {
     transform: scale(1.2);
 }
 
-/* [추가] 반응형 테이블을 위한 컨테이너 */
-.table-container {
+/* 로딩 오버레이 및 스피너 스타일 */
+#loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    overflow-x: auto; /* 내용이 넘칠 경우 가로 스크롤바를 생성 */
-    -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 효과 */
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.hidden {
+    display: none !important;
 }
 
-/* =================================== */
 /* 반응형 웹 디자인을 위한 미디어 쿼리 */
-/* =================================== */
 @media (max-width: 768px) {
     #app {
         margin: 20px auto;
         padding: 15px;
     }
-
-    /* 폼 그룹을 세로로 쌓이도록 변경 */
     .form-group {
-        flex-direction: column; /* 가로 정렬에서 세로 정렬로 변경 */
-        align-items: flex-start; /* 왼쪽 정렬 */
+        flex-direction: column;
+        align-items: flex-start;
     }
-
     .form-group label {
-        width: auto; /* 라벨의 고정 너비 해제 */
-        margin-bottom: 5px; /* 입력창과의 간격 */
+        width: auto;
+        margin-bottom: 5px;
     }
-    
-    /* 한 줄에 2개 있던 폼 그룹도 세로로 쌓이도록 변경 */
     .form-row {
         flex-direction: column;
         gap: 0;
     }
-
     .form-row .form-group {
         width: 100%;
-        margin-bottom: 15px; /* 각 그룹 사이에 간격 추가 */
+        margin-bottom: 15px;
     }
-
     .form-row .form-group label {
-        width: auto; /* 라벨 고정 너비 해제 */
+        width: auto;
     }
-
-    /* 대시보드 아이템도 세로로 쌓이도록 */
     .dashboard-grid {
         flex-direction: column;
     }
-}
-
-/* =================================== */
-/* [추가] 로딩 오버레이 및 스피너 스타일 */
-/* =================================== */
-#loading-overlay {
-    position: fixed; /* 화면 전체에 고정 */
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0.7); /* 반투명 흰색 배경 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999; /* 다른 모든 요소들 위에 있도록 설정 */
-}
-
-.spinner {
-    width: 60px;
-    height: 60px;
-    border: 8px solid #f3f3f3; /* 연한 회색 테두리 */
-    border-top: 8px solid #3498db; /* 파란색 부분 */
-    border-radius: 50%;
-    animation: spin 1s linear infinite; /* 1초에 한 바퀴씩 무한 회전 */
-}
-
-/* 회전 애니메이션 효과 */
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* .hidden 클래스는 이미 만들어져 있지만, 다시 한번 역할을 명시합니다 */
-/* .hidden { display: none !important; } */
-
-
-/* [추가] 월별 손익 조회 아이템 내부 스타일 */
-#monthly-pl-item h3 {
-    margin-bottom: 15px;
-}
-
-.monthly-selector-container {
-    display: flex;
-    flex-direction: column; /* [변경] flex 방향을 세로로 변경 */
-    align-items: stretch;   /* [변경] 아이템들이 꽉 차게 정렬 */
-    gap: 8px;               /* [변경] 위아래 간격 설정 */
-}
-
-.monthly-selector-container select {
-    flex-grow: 1; /* 드롭다운이 가능한 많은 공간을 차지 */
-}
-
-.monthly-selector-container p {
-    flex-shrink: 0; /* 결과 텍스트 너비가 줄어들지 않도록 */
-    min-width: 80px;
-    text-align: right;
-}
-
-/* [추가] 라디오 버튼 그룹 스타일 */
-.radio-group {
-    display: flex;
-    align-items: center;
-    gap: 15px; /* SW와 HR 사이 간격 */
-}
-
-.radio-group input[type="radio"] {
-    width: auto; /* 라디오 버튼은 자동 너비 */
-}
-
-/* 라디오 버튼 옆 라벨 스타일 */
-.radio-group label {
-    width: auto !important; /* 중요! form-group의 label 스타일 덮어쓰기 */
-    margin-bottom: 0 !important; /* 중요! form-group의 label 스타일 덮어쓰기 */
-    font-weight: normal;
-    cursor: pointer;
+    .limit-container {
+        flex-direction: column;
+    }
 }

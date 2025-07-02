@@ -6,10 +6,9 @@
     <title>이서네 부자되기</title>
     <link rel="stylesheet" href="style.css">
     <script src="main.js" defer></script>
-    
 </head>
 <body>
-    
+
     <div id="loading-overlay" class="hidden">
         <div class="spinner"></div>
     </div>
@@ -24,7 +23,7 @@
                 <form id="exchange-form">
                     <fieldset>
                         <legend>새 환전 기록 추가</legend>
-
+                        
                         <div class="form-group">
                             <label>거래자</label>
                             <div class="radio-group">
@@ -43,7 +42,6 @@
                                 <option value="EUR">EUR - 유로</option>
                             </select>
                         </div>
-
                         <div class="form-row">
                             <div class="form-group">
                                 <label for="transaction-type">거래 종류</label>
@@ -57,6 +55,11 @@
                                 <input type="date" id="transaction-date" name="date" required>
                             </div>
                         </div>
+                        
+                        <div id="linked-buy-id-wrapper" class="form-group hidden">
+                            <label for="linked-buy-id">어떤 매입 건을 매도하시나요?</label>
+                            <select id="linked-buy-id" name="linked_buy_id"></select>
+                        </div>
 
                         <div class="form-row">
                             <div class="form-group">
@@ -68,28 +71,16 @@
                                 <input type="text" inputmode="decimal" id="exchange-rate" name="exchange_rate" placeholder="예: 1,320.30" required>
                             </div>
                         </div>
-                        
                         <div class="form-group">
                             <label for="base-amount">원화 환산 금액</label>
                             <input type="text" inputmode="decimal" id="base-amount" name="base_amount" placeholder="자동 계산 또는 직접 입력">
                         </div>
-
-                        <div id="linked-buy-id-wrapper" class="form-group hidden">
-                            <label for="linked-buy-id">어떤 매입 건을 매도하시나요?</label>
-                            <select id="linked-buy-id" name="linked_buy_id">
-                                </select>
-                        </div>
                         
-                        <!-- <div class="form-group">
-                            <label for="memo">메모</label>
-                            <textarea id="memo" name="memo" rows="2" placeholder="메모를 남겨주세요 (선택 사항)"></textarea>
-                        </div> -->
-
                         <button type="submit">저장</button>
                     </fieldset>
                 </form>
             </section>
-
+            
             <section class="dashboard-section">
                 <h2>요약 정보</h2>
                 <div class="dashboard-grid">
@@ -123,42 +114,78 @@
                 <h2>한도 현황</h2>
                 <div class="limit-container">
                     <div class="limit-item">
-                        <h3>일일 매수 한도 (1,000만원)</h3>
+                        <h3>일 매수 잔여한도 (최대 1,000만원)</h3>
                         <div class="limit-tracker">
                             <span class="tracker-label">SW</span>
                             <div class="progress-bar-container">
                                 <div class="progress-bar-fill" id="daily-limit-sw-fill"></div>
-                                <span class="progress-bar-text" id="daily-limit-sw-text">0 / 10,000,000</span>
                             </div>
+                            <span class="tracker-remaining" id="daily-limit-sw-text">잔여: 10,000,000원</span>
                         </div>
                         <div class="limit-tracker">
                             <span class="tracker-label">HR</span>
                             <div class="progress-bar-container">
                                 <div class="progress-bar-fill" id="daily-limit-hr-fill"></div>
-                                <span class="progress-bar-text" id="daily-limit-hr-text">0 / 10,000,000</span>
                             </div>
+                            <span class="tracker-remaining" id="daily-limit-hr-text">잔여: 10,000,000원</span>
                         </div>
                     </div>
                     <div class="limit-item">
-                        <h3>월간 매수 한도 (1억원)</h3>
+                        <h3>월 매수 잔여한도 (최대 1억원)</h3>
                         <div class="limit-tracker">
                             <span class="tracker-label">SW</span>
                             <div class="progress-bar-container">
                                 <div class="progress-bar-fill" id="monthly-limit-sw-fill"></div>
-                                <span class="progress-bar-text" id="monthly-limit-sw-text">0 / 100,000,000</span>
                             </div>
+                            <span class="tracker-remaining" id="monthly-limit-sw-text">잔여: 100,000,000원</span>
                         </div>
                         <div class="limit-tracker">
                             <span class="tracker-label">HR</span>
                             <div class="progress-bar-container">
                                 <div class="progress-bar-fill" id="monthly-limit-hr-fill"></div>
-                                <span class="progress-bar-text" id="monthly-limit-hr-text">0 / 100,000,000</span>
                             </div>
+                            <span class="tracker-remaining" id="monthly-limit-hr-text">잔여: 100,000,000원</span>
                         </div>
                     </div>
                 </div>
             </section>
 
+            <section class="calculator-section">
+                <button id="toggle-calculator-btn" class="accordion-toggle" aria-expanded="false">
+                    환율 계산기 열기 <span>▼</span>
+                </button>
+                <div id="calculator-content" class="hidden">
+                    <div class="calculator-inputs">
+                        <div class="form-group">
+                            <label>거래자</label>
+                            <div class="radio-group">
+                                <input type="radio" id="calc-trader-sw" name="calc-trader" value="SW">
+                                <label for="calc-trader-sw"><b>SW</b></label>
+                                <input type="radio" id="calc-trader-hr" name="calc-trader" value="HR"> <label for="calc-trader-hr"><b>HR</b></label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="calc-buy-select">매수 건 선택</label>
+                            <select id="calc-buy-select">
+                                <option value="">-- 거래자를 먼저 선택하세요 --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="calc-results-container" class="hidden">
+                        <div class="chart-group">
+                            <h4>수익 시나리오</h4>
+                            <div class="chart-container" id="profit-chart-container">
+                                </div>
+                        </div>
+                        <div class="chart-group">
+                            <h4>손실 시나리오</h4>
+                            <div class="chart-container" id="loss-chart-container">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
             <section class="list-section">
                 <h2>거래 히스토리</h2>
                 <div class="table-container">
@@ -173,7 +200,8 @@
                                 <th>거래환율</th>
                                 <th>원화환산금액</th>
                                 <th>손익</th>
-                                <th>관리</th> </tr>
+                                <th>관리</th>
+                            </tr>
                         </thead>
                         <tbody id="record-list-body"></tbody>
                     </table>

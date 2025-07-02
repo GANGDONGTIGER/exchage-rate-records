@@ -31,6 +31,14 @@ const monthlyLimitSwText = document.getElementById('monthly-limit-sw-text');
 const monthlyLimitHrFill = document.getElementById('monthly-limit-hr-fill');
 const monthlyLimitHrText = document.getElementById('monthly-limit-hr-text');
 
+const toggleCalculatorBtn = document.getElementById('toggle-calculator-btn');
+const calculatorContent = document.getElementById('calculator-content');
+const calcTraderRadios = document.querySelectorAll('input[name="calc-trader"]');
+const calcBuySelect = document.getElementById('calc-buy-select');
+const calcResultsContainer = document.getElementById('calc-results-container');
+const profitChartContainer = document.getElementById('profit-chart-container');
+const lossChartContainer = document.getElementById('loss-chart-container');
+
 
 // ---------------------------------
 // 2. 전역 데이터 변수 및 상태
@@ -74,6 +82,7 @@ function calculateAndRenderAll() {
     populateMonthSelector(analytics.monthlyPL);
     renderRecords(analytics.plMap, analytics.soldBuyIds);
     updateAvailableBuyOptions(analytics.soldBuyIds);
+    updateCalculatorBuyOptions(analytics.soldBuyIds);
 }
 
 function calculateAnalytics(records) {
@@ -82,7 +91,11 @@ function calculateAnalytics(records) {
     const monthlyPL = {};
     const plMap = new Map();
     const buyRecordMap = new Map(records.filter(r => r.type === 'buy').map(r => [r.id.toString(), r]));
-    const soldBuyIds = new Set();
+    const soldBuyIds = new Set(
+        records
+            .filter(r => r.type === 'sell' && r.linked_buy_id)
+            .map(r => r.linked_buy_id.toString())
+    );
     
     const now = new Date();
     const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -122,7 +135,6 @@ function calculateAnalytics(records) {
                 const profit = record.base_amount - originalBuy.base_amount;
                 totalPL += profit;
                 plMap.set(record.id.toString(), profit);
-                soldBuyIds.add(originalBuy.id.toString());
                 const sellDate = new Date(record.timestamp);
                 const sellYearMonth = `${sellDate.getFullYear()}-${String(sellDate.getMonth() + 1).padStart(2, '0')}`;
                 if (!monthlyPL[sellYearMonth]) { monthlyPL[sellYearMonth] = 0; }
@@ -158,9 +170,9 @@ function calculateAnalytics(records) {
 }
 
 function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices, limitUsage }) {
-    totalPlElement.textContent = `${totalPL.toLocaleString()} 원`;
+    totalPlElement.textContent = `${Math.round(totalPL).toLocaleString()} 원`;
     totalPlElement.className = totalPL >= 0 ? 'profit' : 'loss';
-    currentMonthPlElement.textContent = `${currentMonthPL.toLocaleString()} 원`;
+    currentMonthPlElement.textContent = `${Math.round(currentMonthPL).toLocaleString()} 원`;
     currentMonthPlElement.className = currentMonthPL >= 0 ? 'profit' : 'loss';
     const holdingsHTML = Object.entries(holdings).map(([currency, amount]) => `<p>${currency}: ${formatNumber(Number(amount).toFixed(2))}</p>`).join('') || '<p>-</p>';
     currentHoldingsElement.innerHTML = holdingsHTML;
@@ -170,21 +182,21 @@ function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices, limi
     const DAILY_MAX = 10000000;
     const MONTHLY_MAX = 100000000;
 
-    let dailyPercentSw = (limitUsage.daily.SW / DAILY_MAX) * 100;
-    dailyLimitSwFill.style.width = `${Math.min(dailyPercentSw, 100)}%`;
-    dailyLimitSwText.textContent = `${limitUsage.daily.SW.toLocaleString()} / ${DAILY_MAX.toLocaleString()}`;
+    const dailyRemainingSw = DAILY_MAX - limitUsage.daily.SW;
+    dailyLimitSwFill.style.width = `${Math.min((limitUsage.daily.SW / DAILY_MAX) * 100, 100)}%`;
+    dailyLimitSwText.textContent = `잔여: ${dailyRemainingSw.toLocaleString()}원`;
     
-    let dailyPercentHr = (limitUsage.daily.HR / DAILY_MAX) * 100;
-    dailyLimitHrFill.style.width = `${Math.min(dailyPercentHr, 100)}%`;
-    dailyLimitHrText.textContent = `${limitUsage.daily.HR.toLocaleString()} / ${DAILY_MAX.toLocaleString()}`;
+    const dailyRemainingHr = DAILY_MAX - limitUsage.daily.HR;
+    dailyLimitHrFill.style.width = `${Math.min((limitUsage.daily.HR / DAILY_MAX) * 100, 100)}%`;
+    dailyLimitHrText.textContent = `잔여: ${dailyRemainingHr.toLocaleString()}원`;
 
-    let monthlyPercentSw = (limitUsage.monthly.SW / MONTHLY_MAX) * 100;
-    monthlyLimitSwFill.style.width = `${Math.min(monthlyPercentSw, 100)}%`;
-    monthlyLimitSwText.textContent = `${limitUsage.monthly.SW.toLocaleString()} / ${MONTHLY_MAX.toLocaleString()}`;
+    const monthlyRemainingSw = MONTHLY_MAX - limitUsage.monthly.SW;
+    monthlyLimitSwFill.style.width = `${Math.min((limitUsage.monthly.SW / MONTHLY_MAX) * 100, 100)}%`;
+    monthlyLimitSwText.textContent = `잔여: ${monthlyRemainingSw.toLocaleString()}원`;
 
-    let monthlyPercentHr = (limitUsage.monthly.HR / MONTHLY_MAX) * 100;
-    monthlyLimitHrFill.style.width = `${Math.min(monthlyPercentHr, 100)}%`;
-    monthlyLimitHrText.textContent = `${limitUsage.monthly.HR.toLocaleString()} / ${MONTHLY_MAX.toLocaleString()}`;
+    const monthlyRemainingHr = MONTHLY_MAX - limitUsage.monthly.HR;
+    monthlyLimitHrFill.style.width = `${Math.min((limitUsage.monthly.HR / MONTHLY_MAX) * 100, 100)}%`;
+    monthlyLimitHrText.textContent = `잔여: ${monthlyRemainingHr.toLocaleString()}원`;
 }
 
 function populateMonthSelector(monthlyData) {
@@ -217,7 +229,7 @@ function populateMonthSelector(monthlyData) {
 function displaySelectedMonthlyPL() {
     const selectedMonth = monthlyPlSelect.value;
     const profit = monthlyPlData[selectedMonth] || 0;
-    monthlyPlResult.textContent = `${profit.toLocaleString()} 원`;
+    monthlyPlResult.textContent = `${Math.round(profit).toLocaleString()} 원`;
     monthlyPlResult.className = profit >= 0 ? 'profit' : 'loss';
 }
 
@@ -246,7 +258,7 @@ function renderRecords(plMap = new Map(), soldBuyIds = new Set()) {
         const plCell = row.querySelector('.record-pl');
         if (record.type === 'sell' && plMap.has(record.id.toString())) {
             const profit = plMap.get(record.id.toString());
-            plCell.textContent = profit.toLocaleString();
+            plCell.textContent = Math.round(profit).toLocaleString();
             plCell.classList.add(profit >= 0 ? 'profit' : 'loss');
         }
         row.querySelector('.edit-btn').dataset.id = record.id;
@@ -259,11 +271,7 @@ function updateAvailableBuyOptions(soldBuyIds) {
     const selectedTrader = document.querySelector('input[name="trader"]:checked')?.value;
     let availableBuyRecords = [];
     if (selectedTrader) {
-        availableBuyRecords = records.filter(r => 
-            r.type === 'buy' &&
-            !soldBuyIds.has(r.id.toString()) &&
-            r.trader === selectedTrader
-        );
+        availableBuyRecords = records.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()) && r.trader === selectedTrader);
     }
     linkedBuyIdSelect.innerHTML = '<option value="">-- 원본 구매 기록 선택 --</option>';
     availableBuyRecords.forEach(r => {
@@ -282,7 +290,7 @@ function calculateBaseAmount() {
     if (!isNaN(foreignAmount) && !isNaN(exchangeRate)) {
         let calculatedAmount = foreignAmount * exchangeRate;
         if (selectedCurrency === 'JPY') {
-            calculatedAmount = calculatedAmount / 100;
+            calculatedAmount /= 100;
         }
         baseAmountInput.value = formatNumber(Math.round(calculatedAmount));
     } else {
@@ -305,8 +313,108 @@ function resetFormToCreateMode() {
     baseAmountInput.value = '';
     transactionDateInput.value = getTodayString();
     editMode = { active: false, recordId: null };
-    form.querySelector('button[type="submit"]').textContent = '기록 저장';
+    form.querySelector('button[type="submit"]').textContent = '저장';
     handleTransactionTypeChange();
+}
+
+function updateCalculatorBuyOptions() {
+    const selectedTrader = document.querySelector('input[name="calc-trader"]:checked')?.value;
+    const { soldBuyIds } = calculateAnalytics(records);
+    let availableBuyRecords = [];
+    if (selectedTrader) {
+        availableBuyRecords = records.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()) && r.trader === selectedTrader);
+    }
+    calcBuySelect.innerHTML = '';
+    if (!selectedTrader) {
+        calcBuySelect.innerHTML = '<option value="">-- 거래자를 먼저 선택하세요 --</option>';
+        renderCalculatorCharts(null);
+        return;
+    }
+    if (availableBuyRecords.length === 0) {
+        calcBuySelect.innerHTML = '<option value="">-- 분석 가능한 매수 건 없음 --</option>';
+        renderCalculatorCharts(null);
+        return;
+    }
+    calcBuySelect.innerHTML = '<option value="">-- 분석할 매수 건 선택 --</option>';
+    availableBuyRecords.forEach(r => {
+        const option = document.createElement('option');
+        option.value = r.id;
+        const displayDate = r.timestamp.substring(0, 10);
+        option.textContent = `${displayDate} / ${r.target_currency} ${r.foreign_amount} (환율: ${r.exchange_rate})`;
+        calcBuySelect.appendChild(option);
+    });
+}
+
+function renderCalculatorCharts(buyRecordId) {
+    if (!buyRecordId) {
+        calcResultsContainer.classList.add('hidden');
+        return;
+    }
+    const buyRecord = records.find(r => r.id.toString() === buyRecordId);
+    if (!buyRecord) return;
+    calcResultsContainer.classList.remove('hidden');
+    profitChartContainer.innerHTML = '';
+    lossChartContainer.innerHTML = '';
+    
+    const baseRate = Number(buyRecord.exchange_rate) || 0;
+    const foreignAmount = Number(buyRecord.foreign_amount) || 0;
+    if (baseRate === 0 || foreignAmount === 0) return;
+    
+    const scenarios = [];
+    for (let i = 1; i <= 5; i++) {
+        scenarios.push(baseRate + i);
+        scenarios.push(baseRate - i);
+    }
+    
+    let maxAbsPL = 0;
+    const chartData = scenarios.map(sellRate => {
+        let originalRateForCalc = baseRate;
+        let currentSellRate = sellRate;
+        if (buyRecord.target_currency === 'JPY') {
+            originalRateForCalc /= 100;
+            currentSellRate /= 100;
+        }
+        const cost = foreignAmount * originalRateForCalc;
+        const revenue = foreignAmount * currentSellRate;
+        const profit = revenue - cost;
+        if (Math.abs(profit) > maxAbsPL) {
+            maxAbsPL = Math.abs(profit);
+        }
+        return { rate: sellRate, pl: profit };
+    });
+
+    chartData.sort((a, b) => a.rate - b.rate).forEach(data => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'bar-wrapper';
+        const valueSpan = document.createElement('span');
+        valueSpan.className = 'bar-value';
+        valueSpan.textContent = `${data.pl >= 0 ? '+' : ''}${Math.round(data.pl).toLocaleString()}`;
+        const barDiv = document.createElement('div');
+        barDiv.className = 'bar';
+        
+        const ratio = maxAbsPL > 0 ? Math.abs(data.pl) / maxAbsPL : 0;
+        const barHeight = Math.pow(ratio, 2) * 100;
+        barDiv.style.height = `${barHeight}%`;
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'bar-label';
+        labelSpan.textContent = formatNumber(Number(data.rate).toFixed(2));
+        if (data.pl >= 0) {
+            valueSpan.classList.add('profit');
+            barDiv.classList.add('profit');
+            wrapper.appendChild(valueSpan);
+            wrapper.appendChild(barDiv);
+            wrapper.appendChild(labelSpan);
+            profitChartContainer.appendChild(wrapper);
+        } else {
+            valueSpan.classList.add('loss');
+            barDiv.classList.add('loss');
+            wrapper.appendChild(valueSpan);
+            wrapper.appendChild(barDiv);
+            wrapper.appendChild(labelSpan);
+            lossChartContainer.appendChild(wrapper);
+        }
+    });
 }
 
 // ---------------------------------
@@ -314,7 +422,22 @@ function resetFormToCreateMode() {
 // ---------------------------------
 transactionTypeSelect.addEventListener('change', handleTransactionTypeChange);
 monthlyPlSelect.addEventListener('change', displaySelectedMonthlyPL);
-
+toggleCalculatorBtn.addEventListener('click', function() {
+    const isExpanded = this.getAttribute('aria-expanded') === 'true';
+    this.setAttribute('aria-expanded', !isExpanded);
+    calculatorContent.classList.toggle('hidden');
+    this.querySelector('span').textContent = isExpanded ? '▼' : '▲';
+    this.childNodes[0].nodeValue = isExpanded ? '환율 계산기 열기 ' : '환율 계산기 닫기 ';
+});
+calcTraderRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+        updateCalculatorBuyOptions();
+        renderCalculatorCharts(null);
+    });
+});
+calcBuySelect.addEventListener('change', function() {
+    renderCalculatorCharts(this.value);
+});
 document.querySelectorAll('input[name="trader"]').forEach(radio => {
     radio.addEventListener('change', () => {
         if (transactionTypeSelect.value === 'sell') {
@@ -323,7 +446,6 @@ document.querySelectorAll('input[name="trader"]').forEach(radio => {
         }
     });
 });
-
 [foreignAmountInput, exchangeRateInput, baseAmountInput].forEach(input => {
     input.addEventListener('input', (e) => {
         const rawValue = unformatNumber(e.target.value);
@@ -337,28 +459,34 @@ document.querySelectorAll('input[name="trader"]').forEach(radio => {
         }
     });
 });
-
 recordListBody.addEventListener('click', function(event) {
     const button = event.target.closest('button');
     if (!button) return;
     const recordId = button.dataset.id;
     if (!recordId) return;
-
+    const recordToHandle = records.find(r => r.id.toString() === recordId);
+    if (!recordToHandle) return alert('수정할 기록을 찾지 못했습니다.');
     if (button.classList.contains('edit-btn')) {
-        const recordToEdit = records.find(r => r.id.toString() === recordId);
-        if (!recordToEdit) return alert('수정할 기록을 찾지 못했습니다.');
-        if (recordToEdit.trader) {
-            document.querySelector(`input[name="trader"][value="${recordToEdit.trader}"]`).checked = true;
+        if (recordToHandle.type === 'sell') {
+            alert("안정적인 데이터 관리를 위해 '판매' 기록은 수정할 수 없습니다.");
+            return;
         }
-        targetCurrencySelect.value = recordToEdit.target_currency;
-        transactionTypeSelect.value = recordToEdit.type;
-        transactionDateInput.value = recordToEdit.timestamp.substring(0, 10);
-        foreignAmountInput.value = formatNumber(recordToEdit.foreign_amount);
-        exchangeRateInput.value = formatNumber(recordToEdit.exchange_rate);
-        baseAmountInput.value = formatNumber(recordToEdit.base_amount);
+        if (recordToHandle.remaining_amount && recordToHandle.remaining_amount != recordToHandle.foreign_amount) {
+            alert("부분적으로 판매된 '구매' 기록은 수정할 수 없습니다.");
+            return;
+        }
+        if (recordToHandle.trader) {
+            document.querySelector(`input[name="trader"][value="${recordToHandle.trader}"]`).checked = true;
+        }
+        targetCurrencySelect.value = recordToHandle.target_currency;
+        transactionTypeSelect.value = recordToHandle.type;
+        transactionDateInput.value = recordToHandle.timestamp.substring(0, 10);
+        foreignAmountInput.value = formatNumber(recordToHandle.foreign_amount);
+        exchangeRateInput.value = formatNumber(recordToHandle.exchange_rate);
+        baseAmountInput.value = formatNumber(recordToHandle.base_amount);
         handleTransactionTypeChange();
-        if (recordToEdit.type === 'sell' && recordToEdit.linked_buy_id) {
-            setTimeout(() => { linkedBuyIdSelect.value = recordToEdit.linked_buy_id; }, 100);
+        if (recordToHandle.type === 'sell' && recordToHandle.linked_buy_id) {
+            setTimeout(() => { linkedBuyIdSelect.value = recordToHandle.linked_buy_id; }, 100);
         }
         editMode = { active: true, recordId: recordId };
         form.querySelector('button[type="submit"]').textContent = '수정 완료';
@@ -381,56 +509,39 @@ recordListBody.addEventListener('click', function(event) {
         .finally(() => { loadingOverlay.classList.add('hidden'); });
     }
 });
-
 form.addEventListener('submit', function(event) {
     event.preventDefault();
     const submitButton = form.querySelector('button[type="submit"]');
-    submitButton.disabled = true;
-    submitButton.textContent = '저장 중...';
-    loadingOverlay.classList.remove('hidden');
-    
     const selectedTrader = document.querySelector('input[name="trader"]:checked');
     if (!selectedTrader) {
         alert('거래자를 선택해주세요.');
-        submitButton.disabled = false;
-        submitButton.textContent = editMode.active ? '수정 완료' : '기록 저장';
-        loadingOverlay.classList.add('hidden');
         return;
     }
-
+    submitButton.disabled = true;
+    submitButton.textContent = '저장 중...';
+    loadingOverlay.classList.remove('hidden');
     const action = editMode.active ? 'update' : 'create';
     const recordId = editMode.active ? editMode.recordId : 't' + Date.now();
-
-    // '수정' 시에는 폼에 있는 날짜를 사용하고, '생성' 시에는 현재 시간을 사용합니다.
     let timestamp;
     if (action === 'update') {
         const dateParts = transactionDateInput.value.split('-');
-        const now = new Date(); // 시간 정보를 가져오기 위해
-        const updatedTimestamp = new Date(
-            parseInt(dateParts[0]),
-            parseInt(dateParts[1]) - 1, // 월은 0부터 시작
-            parseInt(dateParts[2]),
-            now.getHours(),
-            now.getMinutes(),
-            now.getSeconds()
-        );
+        const now = new Date();
+        const updatedTimestamp = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), now.getHours(), now.getMinutes(), now.getSeconds());
         timestamp = updatedTimestamp.toISOString();
-    } else { // create
+    } else {
         timestamp = new Date().toISOString();
     }
-
     const recordData = {
         id: recordId,
         trader: selectedTrader.value,
         type: transactionTypeSelect.value,
-        timestamp: timestamp, // 수정된 타임스탬프 사용
+        timestamp: timestamp,
         target_currency: targetCurrencySelect.value,
         foreign_amount: parseFloat(unformatNumber(foreignAmountInput.value)),
         exchange_rate: parseFloat(unformatNumber(exchangeRateInput.value)),
         base_amount: parseInt(unformatNumber(baseAmountInput.value), 10),
         linked_buy_id: transactionTypeSelect.value === 'sell' ? linkedBuyIdSelect.value : null,
     };
-
     fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: action, data: recordData }),
@@ -451,8 +562,11 @@ form.addEventListener('submit', function(event) {
     .catch(error => alert(`작업에 실패했습니다: ${error.message}`))
     .finally(() => {
         submitButton.disabled = false;
-        if (!editMode.active) { submitButton.textContent = '기록 저장'; } 
-        else { submitButton.textContent = '수정 완료'; }
+        if (!editMode.active) {
+            submitButton.textContent = '저장';
+        } else {
+            submitButton.textContent = '수정 완료';
+        }
         loadingOverlay.classList.add('hidden');
     });
 });
@@ -462,12 +576,10 @@ form.addEventListener('submit', function(event) {
 // ---------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     transactionDateInput.value = getTodayString();
-
     if (SCRIPT_URL.includes("여기에_본인의_웹_앱_URL을_붙여넣어주세요")) {
         alert("main.js 파일의 SCRIPT_URL 변수에 본인의 웹 앱 URL을 먼저 입력해주세요!");
         return;
     }
-    
     loadingOverlay.classList.remove('hidden');
     fetch(SCRIPT_URL)
         .then(response => response.json())

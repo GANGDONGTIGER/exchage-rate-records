@@ -352,20 +352,21 @@ function renderCalculatorCharts(buyRecordId) {
     }
     const buyRecord = records.find(r => r.id.toString() === buyRecordId);
     if (!buyRecord) return;
+
     calcResultsContainer.classList.remove('hidden');
     profitChartContainer.innerHTML = '';
     lossChartContainer.innerHTML = '';
-    
+
     const baseRate = Number(buyRecord.exchange_rate) || 0;
     const foreignAmount = Number(buyRecord.foreign_amount) || 0;
     if (baseRate === 0 || foreignAmount === 0) return;
-    
+
     const scenarios = [];
     for (let i = 1; i <= 5; i++) {
-        scenarios.push(baseRate + i);
-        scenarios.push(baseRate - i);
+        scenarios.push(baseRate + i); // 수익 시나리오 (정수 기준)
+        scenarios.push(baseRate - i); // 손실 시나리오 (정수 기준)
     }
-    
+
     let maxAbsPL = 0;
     const chartData = scenarios.map(sellRate => {
         let originalRateForCalc = baseRate;
@@ -383,38 +384,40 @@ function renderCalculatorCharts(buyRecordId) {
         return { rate: sellRate, pl: profit };
     });
 
-    chartData.sort((a, b) => a.rate - b.rate).forEach(data => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'bar-wrapper';
-        const valueSpan = document.createElement('span');
-        valueSpan.className = 'bar-value';
-        valueSpan.textContent = `${data.pl >= 0 ? '+' : ''}${Math.round(data.pl).toLocaleString()}`;
-        const barDiv = document.createElement('div');
-        barDiv.className = 'bar';
-        
-        const ratio = maxAbsPL > 0 ? Math.abs(data.pl) / maxAbsPL : 0;
-        const barHeight = Math.pow(ratio, 2) * 100;
-        barDiv.style.height = `${barHeight}%`;
+    chartData.forEach(data => {
+        const row = document.createElement('div');
+        row.className = 'h-bar-row';
 
-        const labelSpan = document.createElement('span');
-        labelSpan.className = 'bar-label';
-        labelSpan.textContent = formatNumber(Number(data.rate).toFixed(2));
+        const label = document.createElement('span');
+        label.className = 'h-bar-label';
+        label.textContent = `${data.rate.toLocaleString()}원`;
+
+        const barContainer = document.createElement('div');
+        barContainer.className = 'h-bar-container';
+
+        const barFill = document.createElement('div');
+        barFill.className = 'h-bar-fill';
+
+        const barWidth = maxAbsPL > 0 ? (Math.abs(data.pl) / maxAbsPL) * 100 : 0;
+        barFill.style.width = `${barWidth}%`;
+        barFill.textContent = `${data.pl >= 0 ? '+' : ''}${Math.round(data.pl).toLocaleString()}`;
+
+        barContainer.appendChild(barFill);
+        row.appendChild(label);
+        row.appendChild(barContainer);
+
         if (data.pl >= 0) {
-            valueSpan.classList.add('profit');
-            barDiv.classList.add('profit');
-            wrapper.appendChild(valueSpan);
-            wrapper.appendChild(barDiv);
-            wrapper.appendChild(labelSpan);
-            profitChartContainer.appendChild(wrapper);
+            barFill.classList.add('profit');
+            profitChartContainer.appendChild(row);
         } else {
-            valueSpan.classList.add('loss');
-            barDiv.classList.add('loss');
-            wrapper.appendChild(valueSpan);
-            wrapper.appendChild(barDiv);
-            wrapper.appendChild(labelSpan);
-            lossChartContainer.appendChild(wrapper);
+            barFill.classList.add('loss');
+            lossChartContainer.appendChild(row);
         }
     });
+
+    // 수익은 오름차순, 손실은 내림차순으로 정렬하여 보기 좋게 만듦
+    Array.from(profitChartContainer.children).sort((a,b) => a.querySelector('.h-bar-label').textContent.localeCompare(b.querySelector('.h-bar-label').textContent)).forEach(node => profitChartContainer.appendChild(node));
+    Array.from(lossChartContainer.children).sort((a,b) => b.querySelector('.h-bar-label').textContent.localeCompare(a.querySelector('.h-bar-label').textContent)).forEach(node => lossChartContainer.appendChild(node));
 }
 
 // ---------------------------------

@@ -574,6 +574,29 @@ form.addEventListener('submit', function(event) {
     });
 });
 
+// [추가] '판매 대상 매입 건' 선택 시, 해당 금액을 자동 입력하는 이벤트 리스너
+linkedBuyIdSelect.addEventListener('change', function() {
+    const selectedBuyId = this.value;
+
+    // '-- 원본 구매 기록 선택 --'을 다시 선택한 경우, 입력창을 비웁니다.
+    if (!selectedBuyId) {
+        foreignAmountInput.value = '';
+        baseAmountInput.value = '';
+        return;
+    }
+
+    // 선택된 ID를 바탕으로 전체 기록에서 해당하는 '구매' 기록을 찾습니다.
+    const selectedBuyRecord = records.find(r => r.id.toString() === selectedBuyId);
+
+    if (selectedBuyRecord) {
+        // 1. 해당 매수 건의 외화 금액을 가져와 포맷팅하여 입력창에 설정합니다.
+        foreignAmountInput.value = formatNumber(selectedBuyRecord.foreign_amount);
+
+        // 2. '원화 환산 금액' 자동 계산 함수를 수동으로 실행시켜줍니다.
+        calculateBaseAmount();
+    }
+});
+
 // ---------------------------------
 // 6. 초기 실행
 // ---------------------------------

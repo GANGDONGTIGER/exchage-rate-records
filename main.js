@@ -50,6 +50,8 @@ let currentPage = 1;
 let totalRecords = 0;
 const RECORDS_PER_PAGE = 50;
 let isLoading = false;
+let currentTraderFilter = 'all'; // [추가] 현재 선택된 거래자 필터 ('all', 'SW', 'HR')
+
 
 // ---------------------------------
 // 3. 헬퍼(Helper) 함수
@@ -146,7 +148,12 @@ function displaySelectedMonthlyPL() {
 
 function renderRecords(soldBuyIds = new Set()) {
     recordListBody.innerHTML = '';
-    records.forEach(record => {
+    // [추가] 현재 필터에 따라 보여줄 데이터를 결정합니다.
+    const recordsToRender = (currentTraderFilter === 'all')
+        ? records
+        : records.filter(r => r.trader === currentTraderFilter);
+
+    recordsToRender.forEach(record => {
         const row = recordRowTemplate.content.cloneNode(true).querySelector('tr');
         if ((record.type === 'sell' && record.linked_buy_id) || (record.type === 'buy' && soldBuyIds.has(record.id.toString()))) {
             row.classList.add('record-completed');
@@ -489,6 +496,32 @@ nextPageBtn.addEventListener('click', () => {
     const totalPages = Math.ceil(totalRecords / RECORDS_PER_PAGE);
     if (!isLoading && currentPage < totalPages) {
         fetchRecords(currentPage + 1);
+    }
+});
+// [추가] 거래 히스토리 필터 버튼 이벤트 리스너
+document.querySelector('.filter-controls').addEventListener('click', (event) => {
+    if (event.target.classList.contains('filter-btn')) {
+        const selectedTrader = event.target.dataset.trader;
+
+        // 1. 전역 필터 상태 업데이트
+        currentTraderFilter = selectedTrader;
+
+        // 2. 모든 버튼에서 'active' 클래스 제거 후, 클릭된 버튼에만 추가
+        document.querySelectorAll('.filter-controls .filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+
+        // 3. 필터링된 데이터로 테이블 다시 그리기
+        // renderRecords는 현재 페이지 데이터(records)를 사용하므로,
+        // 전체 분석 데이터에서 soldBuyIds만 다시 가져와서 전달합니다.
+        // [수정] soldBuyIds를 allRecordsForFilter에서 직접 계산합니다.
+        const soldBuyIds = new Set(
+            allRecordsForFilter
+                .filter(r => r.type === 'sell' && r.linked_buy_id)
+                .map(r => r.linked_buy_id.toString())
+        );
+        renderRecords(soldBuyIds);
     }
 });
 

@@ -495,3 +495,29 @@ button[type="submit"]:hover {
 #page-info {
     font-weight: bold;
 }
+
+/* [추가] 거래 히스토리 필터 버튼 스타일 */
+.filter-controls {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 8px;
+}
+.filter-btn {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background-color: #f9f9f9;
+    border-radius: 15px; /* 타원형 버튼 */
+    cursor: pointer;
+    font-size: 0.9em;
+    color: #555;
+    transition: all 0.2s ease;
+}
+.filter-btn:hover {
+    background-color: #e0e0e0;
+}
+.filter-btn.active {
+    background-color: #34495e; /* 활성화된 버튼 색상 */
+    color: white;
+    border-color: #34495e;
+    font-weight: bold;
+}

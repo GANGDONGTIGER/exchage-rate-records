@@ -5,7 +5,6 @@ const form = document.getElementById('exchange-form');
 const recordListBody = document.getElementById('record-list-body');
 const recordRowTemplate = document.getElementById('record-row-template');
 const loadingOverlay = document.getElementById('loading-overlay');
-
 const targetCurrencySelect = document.getElementById('target-currency');
 const transactionTypeSelect = document.getElementById('transaction-type');
 const transactionDateInput = document.getElementById('transaction-date');
@@ -14,14 +13,12 @@ const exchangeRateInput = document.getElementById('exchange-rate');
 const baseAmountInput = document.getElementById('base-amount');
 const linkedBuyIdWrapper = document.getElementById('linked-buy-id-wrapper');
 const linkedBuyIdSelect = document.getElementById('linked-buy-id');
-
 const totalPlElement = document.getElementById('total-pl');
 const currentHoldingsElement = document.getElementById('current-holdings');
 const avgBuyPriceElement = document.getElementById('avg-buy-price');
 const currentMonthPlElement = document.getElementById('current-month-pl');
 const monthlyPlSelect = document.getElementById('monthly-pl-select');
 const monthlyPlResult = document.getElementById('monthly-pl-result');
-
 const dailyLimitSwFill = document.getElementById('daily-limit-sw-fill');
 const dailyLimitSwText = document.getElementById('daily-limit-sw-text');
 const dailyLimitHrFill = document.getElementById('daily-limit-hr-fill');
@@ -30,7 +27,6 @@ const monthlyLimitSwFill = document.getElementById('monthly-limit-sw-fill');
 const monthlyLimitSwText = document.getElementById('monthly-limit-sw-text');
 const monthlyLimitHrFill = document.getElementById('monthly-limit-hr-fill');
 const monthlyLimitHrText = document.getElementById('monthly-limit-hr-text');
-
 const toggleCalculatorBtn = document.getElementById('toggle-calculator-btn');
 const calculatorContent = document.getElementById('calculator-content');
 const calcTraderRadios = document.querySelectorAll('input[name="calc-trader"]');
@@ -38,16 +34,22 @@ const calcBuySelect = document.getElementById('calc-buy-select');
 const calcResultsContainer = document.getElementById('calc-results-container');
 const profitChartContainer = document.getElementById('profit-chart-container');
 const lossChartContainer = document.getElementById('loss-chart-container');
-
+const prevPageBtn = document.getElementById('prev-page-btn');
+const nextPageBtn = document.getElementById('next-page-btn');
+const pageInfoSpan = document.getElementById('page-info');
 
 // ---------------------------------
 // 2. 전역 데이터 변수 및 상태
 // ---------------------------------
 let records = [];
+let allRecordsForFilter = [];
 let monthlyPlData = {};
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw0skZAuWgTMGOuTehPepXfIbUihjagRDQfTVaFHVjWbVC2JqRkTNNxGVtE9DMuaHi6cA/exec"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw0skZAuWgTMGOuTehPepXfIbUihjagRDQfTVaFHVjWbVC2JqRkTNNxGVtE9DMuaHi6cA/exec";
 let editMode = { active: false, recordId: null };
-
+let currentPage = 1;
+let totalRecords = 0;
+const RECORDS_PER_PAGE = 50;
+let isLoading = false;
 
 // ---------------------------------
 // 3. 헬퍼(Helper) 함수
@@ -59,141 +61,52 @@ function getTodayString() {
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
-
 function formatNumber(value) {
     const stringValue = value.toString();
     const parts = stringValue.split('.');
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     return parts.join('.');
 }
-
 function unformatNumber(stringValue) {
     return stringValue.toString().replace(/,/g, '');
 }
 
-
 // ---------------------------------
 // 4. 핵심 기능 함수
 // ---------------------------------
-function calculateAndRenderAll() {
-    const analytics = calculateAnalytics(records);
-    monthlyPlData = analytics.monthlyPL;
-    updateDashboard(analytics);
-    populateMonthSelector(analytics.monthlyPL);
-    renderRecords(analytics.plMap, analytics.soldBuyIds);
-    updateAvailableBuyOptions(analytics.soldBuyIds);
-    updateCalculatorBuyOptions(analytics.soldBuyIds);
-}
-
-function calculateAnalytics(records) {
-    let totalPL = 0;
-    let currentMonthPL = 0;
-    const monthlyPL = {};
-    const plMap = new Map();
-    const buyRecordMap = new Map(records.filter(r => r.type === 'buy').map(r => [r.id.toString(), r]));
-    const soldBuyIds = new Set(
-        records
-            .filter(r => r.type === 'sell' && r.linked_buy_id)
-            .map(r => r.linked_buy_id.toString())
-    );
-    
-    const now = new Date();
-    const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    
-    let dailyLimitStart = new Date(now);
-    if (now.getHours() < 9) {
-        dailyLimitStart.setDate(dailyLimitStart.getDate() - 1);
-    }
-    dailyLimitStart.setHours(9, 0, 0, 0);
-    let dailyLimitEnd = new Date(dailyLimitStart);
-    dailyLimitEnd.setDate(dailyLimitEnd.getDate() + 1);
-
-    let monthlyLimitStart = new Date(now.getFullYear(), now.getMonth(), 1, 9, 0, 0);
-    if (now.getDate() === 1 && now.getHours() < 9) {
-        monthlyLimitStart.setMonth(monthlyLimitStart.getMonth() - 1);
-    }
-    let monthlyLimitEnd = new Date(monthlyLimitStart);
-    monthlyLimitEnd.setMonth(monthlyLimitEnd.getMonth() + 1);
-
-    const limitUsage = { daily: { SW: 0, HR: 0 }, monthly: { SW: 0, HR: 0 } };
-
-    records.forEach(record => {
-        const recordDate = new Date(record.timestamp);
-
-        if (record.type === 'buy' && record.trader) {
-            if (recordDate >= dailyLimitStart && recordDate < dailyLimitEnd) {
-                limitUsage.daily[record.trader] += record.base_amount;
-            }
-            if (recordDate >= monthlyLimitStart && recordDate < monthlyLimitEnd) {
-                limitUsage.monthly[record.trader] += record.base_amount;
-            }
-        }
-        
-        if (record.type === 'sell' && record.linked_buy_id) {
-            const originalBuy = buyRecordMap.get(record.linked_buy_id.toString());
-            if (originalBuy) {
-                const profit = record.base_amount - originalBuy.base_amount;
-                totalPL += profit;
-                plMap.set(record.id.toString(), profit);
-                const sellDate = new Date(record.timestamp);
-                const sellYearMonth = `${sellDate.getFullYear()}-${String(sellDate.getMonth() + 1).padStart(2, '0')}`;
-                if (!monthlyPL[sellYearMonth]) { monthlyPL[sellYearMonth] = 0; }
-                monthlyPL[sellYearMonth] += profit;
-                if (sellYearMonth === currentYearMonth) { currentMonthPL += profit; }
-            }
-        }
-    });
-
-    const holdings = {};
-    const buyStats = {};
-    records.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString())).forEach(buyRecord => {
-        const currency = buyRecord.target_currency;
-        if (!holdings[currency]) {
-            holdings[currency] = 0;
-            buyStats[currency] = { totalAmount: 0, totalCost: 0 };
-        }
-        holdings[currency] += buyRecord.foreign_amount;
-        buyStats[currency].totalAmount += buyRecord.foreign_amount;
-        buyStats[currency].totalCost += buyRecord.base_amount;
-    });
-
-    const avgBuyPrices = {};
-    for (const currency in buyStats) {
-        let avgPrice = buyStats[currency].totalCost / buyStats[currency].totalAmount;
-        if (currency === 'JPY') {
-            avgPrice = avgPrice * 100;
-        }
-        avgBuyPrices[currency] = avgPrice;
-    }
-    
-    return { totalPL, currentMonthPL, monthlyPL, plMap, holdings, avgBuyPrices, soldBuyIds, limitUsage };
+function renderAll(response) {
+    records = response.records;
+    totalRecords = response.totalRecords;
+    allRecordsForFilter = response.allRecordsForFilter;
+    monthlyPlData = response.analytics.monthlyPL;
+    updateDashboard(response.analytics);
+    populateMonthSelector(response.analytics.monthlyPL);
+    renderRecords(new Set(response.analytics.soldBuyIds));
+    updateAvailableBuyOptions();
+    updateCalculatorBuyOptions();
+    renderPagination();
 }
 
 function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices, limitUsage }) {
     totalPlElement.textContent = `${Math.round(totalPL).toLocaleString()} 원`;
-    totalPlElement.className = totalPL >= 0 ? 'profit' : 'loss';
+    totalPlElement.className = `dashboard-value ${totalPL >= 0 ? 'profit' : 'loss'}`;
     currentMonthPlElement.textContent = `${Math.round(currentMonthPL).toLocaleString()} 원`;
-    currentMonthPlElement.className = currentMonthPL >= 0 ? 'profit' : 'loss';
+    currentMonthPlElement.className = `dashboard-value ${currentMonthPL >= 0 ? 'profit' : 'loss'}`;
     const holdingsHTML = Object.entries(holdings).map(([currency, amount]) => `<p>${currency}: ${formatNumber(Number(amount).toFixed(2))}</p>`).join('') || '<p>-</p>';
     currentHoldingsElement.innerHTML = holdingsHTML;
     const avgPricesHTML = Object.entries(avgBuyPrices).map(([currency, price]) => `<p>${currency}: ${formatNumber(Number(price).toFixed(2))} 원</p>`).join('') || '<p>-</p>';
     avgBuyPriceElement.innerHTML = avgPricesHTML;
-    
     const DAILY_MAX = 10000000;
     const MONTHLY_MAX = 100000000;
-
     const dailyRemainingSw = DAILY_MAX - limitUsage.daily.SW;
     dailyLimitSwFill.style.width = `${Math.min((limitUsage.daily.SW / DAILY_MAX) * 100, 100)}%`;
     dailyLimitSwText.textContent = `잔여: ${dailyRemainingSw.toLocaleString()}원`;
-    
     const dailyRemainingHr = DAILY_MAX - limitUsage.daily.HR;
     dailyLimitHrFill.style.width = `${Math.min((limitUsage.daily.HR / DAILY_MAX) * 100, 100)}%`;
     dailyLimitHrText.textContent = `잔여: ${dailyRemainingHr.toLocaleString()}원`;
-
     const monthlyRemainingSw = MONTHLY_MAX - limitUsage.monthly.SW;
     monthlyLimitSwFill.style.width = `${Math.min((limitUsage.monthly.SW / MONTHLY_MAX) * 100, 100)}%`;
     monthlyLimitSwText.textContent = `잔여: ${monthlyRemainingSw.toLocaleString()}원`;
-
     const monthlyRemainingHr = MONTHLY_MAX - limitUsage.monthly.HR;
     monthlyLimitHrFill.style.width = `${Math.min((limitUsage.monthly.HR / MONTHLY_MAX) * 100, 100)}%`;
     monthlyLimitHrText.textContent = `잔여: ${monthlyRemainingHr.toLocaleString()}원`;
@@ -203,9 +116,7 @@ function populateMonthSelector(monthlyData) {
     monthlyPlSelect.innerHTML = '';
     const sortedMonths = Object.keys(monthlyData).sort().reverse();
     const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth();
-    let prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+    let prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const defaultSelectedMonth = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
     if (sortedMonths.length === 0) {
         monthlyPlSelect.innerHTML = '<option>기록 없음</option>';
@@ -233,21 +144,18 @@ function displaySelectedMonthlyPL() {
     monthlyPlResult.className = profit >= 0 ? 'profit' : 'loss';
 }
 
-function renderRecords(plMap = new Map(), soldBuyIds = new Set()) {
+function renderRecords(soldBuyIds = new Set()) {
     recordListBody.innerHTML = '';
-    const sortedRecords = [...records].reverse();
-    sortedRecords.forEach(record => {
+    records.forEach(record => {
         const row = recordRowTemplate.content.cloneNode(true).querySelector('tr');
         if ((record.type === 'sell' && record.linked_buy_id) || (record.type === 'buy' && soldBuyIds.has(record.id.toString()))) {
             row.classList.add('record-completed');
         }
         const typeCell = row.querySelector('.record-type');
         if (record.type === 'buy') {
-            typeCell.textContent = '매수';
-            typeCell.style.color = '#3498db';
+            typeCell.textContent = '매수'; typeCell.style.color = '#3498db';
         } else {
-            typeCell.textContent = '매도';
-            typeCell.style.color = '#e74c3c';
+            typeCell.textContent = '매도'; typeCell.style.color = '#e74c3c';
         }
         row.querySelector('.record-trader').textContent = record.trader || '-';
         row.querySelector('.record-date').textContent = record.timestamp.substring(0, 10);
@@ -256,10 +164,13 @@ function renderRecords(plMap = new Map(), soldBuyIds = new Set()) {
         row.querySelector('.record-rate').textContent = formatNumber(Number(record.exchange_rate).toFixed(2));
         row.querySelector('.record-base-amount').textContent = Math.round(record.base_amount).toLocaleString();
         const plCell = row.querySelector('.record-pl');
-        if (record.type === 'sell' && plMap.has(record.id.toString())) {
-            const profit = plMap.get(record.id.toString());
-            plCell.textContent = Math.round(profit).toLocaleString();
-            plCell.classList.add(profit >= 0 ? 'profit' : 'loss');
+        if (record.type === 'sell' && record.linked_buy_id) {
+            const originalBuy = allRecordsForFilter.find(r => r.id.toString() === record.linked_buy_id.toString());
+            if (originalBuy) {
+                const profit = record.base_amount - originalBuy.base_amount;
+                plCell.textContent = Math.round(profit).toLocaleString();
+                plCell.classList.add(profit >= 0 ? 'profit' : 'loss');
+            }
         }
         row.querySelector('.edit-btn').dataset.id = record.id;
         row.querySelector('.delete-btn').dataset.id = record.id;
@@ -267,11 +178,12 @@ function renderRecords(plMap = new Map(), soldBuyIds = new Set()) {
     });
 }
 
-function updateAvailableBuyOptions(soldBuyIds) {
+function updateAvailableBuyOptions() {
+    const soldBuyIds = new Set(allRecordsForFilter.filter(r => r.type === 'sell' && r.linked_buy_id).map(r => r.linked_buy_id.toString()));
     const selectedTrader = document.querySelector('input[name="trader"]:checked')?.value;
     let availableBuyRecords = [];
     if (selectedTrader) {
-        availableBuyRecords = records.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()) && r.trader === selectedTrader);
+        availableBuyRecords = allRecordsForFilter.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()) && r.trader === selectedTrader);
     }
     linkedBuyIdSelect.innerHTML = '<option value="">-- 원본 구매 기록 선택 --</option>';
     availableBuyRecords.forEach(r => {
@@ -301,8 +213,7 @@ function calculateBaseAmount() {
 function handleTransactionTypeChange() {
     if (transactionTypeSelect.value === 'sell') {
         linkedBuyIdWrapper.classList.remove('hidden');
-        const analytics = calculateAnalytics(records);
-        updateAvailableBuyOptions(analytics.soldBuyIds);
+        updateAvailableBuyOptions();
     } else {
         linkedBuyIdWrapper.classList.add('hidden');
     }
@@ -318,11 +229,11 @@ function resetFormToCreateMode() {
 }
 
 function updateCalculatorBuyOptions() {
+    const soldBuyIds = new Set(allRecordsForFilter.filter(r => r.type === 'sell' && r.linked_buy_id).map(r => r.linked_buy_id.toString()));
     const selectedTrader = document.querySelector('input[name="calc-trader"]:checked')?.value;
-    const { soldBuyIds } = calculateAnalytics(records);
     let availableBuyRecords = [];
     if (selectedTrader) {
-        availableBuyRecords = records.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()) && r.trader === selectedTrader);
+        availableBuyRecords = allRecordsForFilter.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()) && r.trader === selectedTrader);
     }
     calcBuySelect.innerHTML = '';
     if (!selectedTrader) {
@@ -350,23 +261,19 @@ function renderCalculatorCharts(buyRecordId) {
         calcResultsContainer.classList.add('hidden');
         return;
     }
-    const buyRecord = records.find(r => r.id.toString() === buyRecordId);
+    const buyRecord = allRecordsForFilter.find(r => r.id.toString() === buyRecordId);
     if (!buyRecord) return;
-
     calcResultsContainer.classList.remove('hidden');
     profitChartContainer.innerHTML = '';
     lossChartContainer.innerHTML = '';
-
     const baseRate = Number(buyRecord.exchange_rate) || 0;
     const foreignAmount = Number(buyRecord.foreign_amount) || 0;
     if (baseRate === 0 || foreignAmount === 0) return;
-
     const scenarios = [];
     for (let i = 1; i <= 5; i++) {
-        scenarios.push(baseRate + i); // 수익 시나리오 (정수 기준)
-        scenarios.push(baseRate - i); // 손실 시나리오 (정수 기준)
+        scenarios.push(Math.round(baseRate) + i);
+        scenarios.push(Math.round(baseRate) - i);
     }
-
     let maxAbsPL = 0;
     const chartData = scenarios.map(sellRate => {
         let originalRateForCalc = baseRate;
@@ -383,29 +290,23 @@ function renderCalculatorCharts(buyRecordId) {
         }
         return { rate: sellRate, pl: profit };
     });
-
-    chartData.forEach(data => {
+    chartData.sort((a, b) => a.rate - b.rate).forEach(data => {
         const row = document.createElement('div');
         row.className = 'h-bar-row';
-
         const label = document.createElement('span');
         label.className = 'h-bar-label';
         label.textContent = `${data.rate.toLocaleString()}원`;
-
         const barContainer = document.createElement('div');
         barContainer.className = 'h-bar-container';
-
         const barFill = document.createElement('div');
         barFill.className = 'h-bar-fill';
-
-        const barWidth = maxAbsPL > 0 ? (Math.abs(data.pl) / maxAbsPL) * 100 : 0;
+        const ratio = maxAbsPL > 0 ? Math.abs(data.pl) / maxAbsPL : 0;
+        const barWidth = Math.pow(ratio, 2) * 100;
         barFill.style.width = `${barWidth}%`;
         barFill.textContent = `${data.pl >= 0 ? '+' : ''}${Math.round(data.pl).toLocaleString()}`;
-
         barContainer.appendChild(barFill);
         row.appendChild(label);
         row.appendChild(barContainer);
-
         if (data.pl >= 0) {
             barFill.classList.add('profit');
             profitChartContainer.appendChild(row);
@@ -414,10 +315,15 @@ function renderCalculatorCharts(buyRecordId) {
             lossChartContainer.appendChild(row);
         }
     });
+    Array.from(profitChartContainer.children).sort((a,b) => a.querySelector('.h-bar-label').textContent.localeCompare(b.querySelector('.h-bar-label').textContent, undefined, {numeric: true})).forEach(node => profitChartContainer.appendChild(node));
+    Array.from(lossChartContainer.children).sort((a,b) => b.querySelector('.h-bar-label').textContent.localeCompare(a.querySelector('.h-bar-label').textContent, undefined, {numeric: true})).forEach(node => lossChartContainer.appendChild(node));
+}
 
-    // 수익은 오름차순, 손실은 내림차순으로 정렬하여 보기 좋게 만듦
-    Array.from(profitChartContainer.children).sort((a,b) => a.querySelector('.h-bar-label').textContent.localeCompare(b.querySelector('.h-bar-label').textContent)).forEach(node => profitChartContainer.appendChild(node));
-    Array.from(lossChartContainer.children).sort((a,b) => b.querySelector('.h-bar-label').textContent.localeCompare(a.querySelector('.h-bar-label').textContent)).forEach(node => lossChartContainer.appendChild(node));
+function renderPagination() {
+    const totalPages = Math.ceil(totalRecords / RECORDS_PER_PAGE);
+    pageInfoSpan.textContent = `Page ${currentPage} / ${totalPages || 1}`;
+    prevPageBtn.disabled = currentPage === 1;
+    nextPageBtn.disabled = currentPage >= totalPages;
 }
 
 // ---------------------------------
@@ -441,11 +347,23 @@ calcTraderRadios.forEach(radio => {
 calcBuySelect.addEventListener('change', function() {
     renderCalculatorCharts(this.value);
 });
+linkedBuyIdSelect.addEventListener('change', function() {
+    const selectedBuyId = this.value;
+    if (!selectedBuyId) {
+        foreignAmountInput.value = '';
+        baseAmountInput.value = '';
+        return;
+    }
+    const selectedBuyRecord = allRecordsForFilter.find(r => r.id.toString() === selectedBuyId);
+    if (selectedBuyRecord) {
+        foreignAmountInput.value = formatNumber(selectedBuyRecord.foreign_amount);
+        calculateBaseAmount();
+    }
+});
 document.querySelectorAll('input[name="trader"]').forEach(radio => {
     radio.addEventListener('change', () => {
         if (transactionTypeSelect.value === 'sell') {
-            const analytics = calculateAnalytics(records);
-            updateAvailableBuyOptions(analytics.soldBuyIds);
+            updateAvailableBuyOptions();
         }
     });
 });
@@ -467,15 +385,11 @@ recordListBody.addEventListener('click', function(event) {
     if (!button) return;
     const recordId = button.dataset.id;
     if (!recordId) return;
-    const recordToHandle = records.find(r => r.id.toString() === recordId);
+    const recordToHandle = allRecordsForFilter.find(r => r.id.toString() === recordId);
     if (!recordToHandle) return alert('수정할 기록을 찾지 못했습니다.');
     if (button.classList.contains('edit-btn')) {
         if (recordToHandle.type === 'sell') {
             alert("안정적인 데이터 관리를 위해 '판매' 기록은 수정할 수 없습니다.");
-            return;
-        }
-        if (recordToHandle.remaining_amount && recordToHandle.remaining_amount != recordToHandle.foreign_amount) {
-            alert("부분적으로 판매된 '구매' 기록은 수정할 수 없습니다.");
             return;
         }
         if (recordToHandle.trader) {
@@ -504,8 +418,7 @@ recordListBody.addEventListener('click', function(event) {
         .then(response => response.json())
         .then(result => {
             if (result.status === 'success') {
-                records = records.filter(r => r.id.toString() !== result.id.toString());
-                calculateAndRenderAll();
+                fetchRecords(currentPage);
             } else { throw new Error(result.message); }
         })
         .catch(error => alert(`삭제에 실패했습니다: ${error.message}`))
@@ -552,13 +465,7 @@ form.addEventListener('submit', function(event) {
     .then(response => response.json())
     .then(result => {
         if (result.status === 'success') {
-            if (action === 'create') {
-                records.push(result.data);
-            } else {
-                const index = records.findIndex(r => r.id.toString() === result.data.id.toString());
-                if (index > -1) records[index] = result.data;
-            }
-            calculateAndRenderAll();
+            fetchRecords(1);
             resetFormToCreateMode();
         } else { throw new Error(result.message || '알 수 없는 에러 발생'); }
     })
@@ -573,52 +480,61 @@ form.addEventListener('submit', function(event) {
         loadingOverlay.classList.add('hidden');
     });
 });
-
-// [추가] '판매 대상 매입 건' 선택 시, 해당 금액을 자동 입력하는 이벤트 리스너
-linkedBuyIdSelect.addEventListener('change', function() {
-    const selectedBuyId = this.value;
-
-    // '-- 원본 구매 기록 선택 --'을 다시 선택한 경우, 입력창을 비웁니다.
-    if (!selectedBuyId) {
-        foreignAmountInput.value = '';
-        baseAmountInput.value = '';
-        return;
+prevPageBtn.addEventListener('click', () => {
+    if (!isLoading && currentPage > 1) {
+        fetchRecords(currentPage - 1);
     }
-
-    // 선택된 ID를 바탕으로 전체 기록에서 해당하는 '구매' 기록을 찾습니다.
-    const selectedBuyRecord = records.find(r => r.id.toString() === selectedBuyId);
-
-    if (selectedBuyRecord) {
-        // 1. 해당 매수 건의 외화 금액을 가져와 포맷팅하여 입력창에 설정합니다.
-        foreignAmountInput.value = formatNumber(selectedBuyRecord.foreign_amount);
-
-        // 2. '원화 환산 금액' 자동 계산 함수를 수동으로 실행시켜줍니다.
-        calculateBaseAmount();
+});
+nextPageBtn.addEventListener('click', () => {
+    const totalPages = Math.ceil(totalRecords / RECORDS_PER_PAGE);
+    if (!isLoading && currentPage < totalPages) {
+        fetchRecords(currentPage + 1);
     }
 });
 
 // ---------------------------------
 // 6. 초기 실행
 // ---------------------------------
+function fetchRecords(page = 1) {
+    if (isLoading) return;
+    isLoading = true;
+    loadingOverlay.classList.remove('hidden');
+
+    fetch(`${SCRIPT_URL}?page=${page}&limit=${RECORDS_PER_PAGE}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(res => {
+            // 백엔드 응답 구조 확인
+            if (!res || typeof res.analytics === 'undefined' || !Array.isArray(res.records)) {
+                throw new TypeError("서버로부터 받은 데이터 형식이 올바르지 않습니다.");
+            }
+            
+            records = res.records;
+            totalRecords = res.totalRecords;
+            allRecordsForFilter = res.allRecordsForFilter;
+            
+            currentPage = page;
+            renderAll(res);
+        })
+        .catch(error => {
+            console.error('데이터를 불러오는 중 에러 발생:', error);
+            alert('데이터를 불러오는 데 실패했습니다. Apps Script를 다시 배포하거나 Console을 확인해주세요.');
+        })
+        .finally(() => {
+            loadingOverlay.classList.add('hidden');
+            isLoading = false;
+        });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     transactionDateInput.value = getTodayString();
     if (SCRIPT_URL.includes("여기에_본인의_웹_앱_URL을_붙여넣어주세요")) {
         alert("main.js 파일의 SCRIPT_URL 변수에 본인의 웹 앱 URL을 먼저 입력해주세요!");
         return;
     }
-    loadingOverlay.classList.remove('hidden');
-    fetch(SCRIPT_URL)
-        .then(response => response.json())
-        .then(data => {
-            records = data;
-            calculateAndRenderAll();
-            handleTransactionTypeChange();
-        })
-        .catch(error => {
-            console.error('데이터를 불러오는 중 에러 발생:', error);
-            alert('데이터를 불러오는 데 실패했습니다. Apps Script 배포나 URL을 확인해주세요.');
-        })
-        .finally(() => {
-            loadingOverlay.classList.add('hidden');
-        });
+    fetchRecords(1);
 });

@@ -469,3 +469,29 @@ button[type="submit"]:hover {
         flex-direction: column;
     }
 }
+
+/* [추가] 페이지네이션 컨트롤 스타일 */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+.pagination-controls button {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    background-color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.pagination-controls button:hover:not(:disabled) {
+    background-color: #f2f2f2;
+}
+.pagination-controls button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+#page-info {
+    font-weight: bold;
+}

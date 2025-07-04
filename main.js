@@ -146,45 +146,67 @@ function displaySelectedMonthlyPL() {
     monthlyPlResult.className = profit >= 0 ? 'profit' : 'loss';
 }
 
+// ... 파일 상단 및 다른 함수들은 이전과 동일 ...
+
 function renderRecords(soldBuyIds = new Set()) {
     recordListBody.innerHTML = '';
-    // [추가] 현재 필터에 따라 보여줄 데이터를 결정합니다.
+
     const recordsToRender = (currentTraderFilter === 'all')
         ? records
         : records.filter(r => r.trader === currentTraderFilter);
 
     recordsToRender.forEach(record => {
-        const row = recordRowTemplate.content.cloneNode(true).querySelector('tr');
+        // 1. 템플릿에서 모든 요소(<tr> 2개)를 복제합니다.
+        const templateContent = recordRowTemplate.content.cloneNode(true);
+        const mainRow = templateContent.querySelector('.main-record-row');
+        const detailsRow = templateContent.querySelector('.linked-buy-row');
+        
+        // --- 2. 메인 행(mainRow) 데이터 채우기 (이전과 동일) ---
         if ((record.type === 'sell' && record.linked_buy_id) || (record.type === 'buy' && soldBuyIds.has(record.id.toString()))) {
-            row.classList.add('record-completed');
+            mainRow.classList.add('record-completed');
         }
-        const typeCell = row.querySelector('.record-type');
+        const typeCell = mainRow.querySelector('.record-type');
         if (record.type === 'buy') {
             typeCell.textContent = '매수'; typeCell.style.color = '#3498db';
         } else {
             typeCell.textContent = '매도'; typeCell.style.color = '#e74c3c';
         }
-        row.querySelector('.record-trader').textContent = record.trader || '-';
-        row.querySelector('.record-date').textContent = record.timestamp.substring(0, 10);
-        row.querySelector('.record-currency').textContent = record.target_currency;
-        row.querySelector('.record-foreign-amount').textContent = formatNumber(Number(record.foreign_amount).toFixed(2));
-        row.querySelector('.record-rate').textContent = formatNumber(Number(record.exchange_rate).toFixed(2));
-        row.querySelector('.record-base-amount').textContent = Math.round(record.base_amount).toLocaleString();
-        const plCell = row.querySelector('.record-pl');
+        mainRow.querySelector('.record-trader').textContent = record.trader || '-';
+        mainRow.querySelector('.record-date').textContent = record.timestamp.substring(0, 10);
+        mainRow.querySelector('.record-currency').textContent = record.target_currency;
+        mainRow.querySelector('.record-foreign-amount').textContent = formatNumber(Number(record.foreign_amount).toFixed(2));
+        mainRow.querySelector('.record-rate').textContent = formatNumber(Number(record.exchange_rate).toFixed(2));
+        mainRow.querySelector('.record-base-amount').textContent = Math.round(record.base_amount).toLocaleString();
+        mainRow.querySelector('.edit-btn').dataset.id = record.id;
+        mainRow.querySelector('.delete-btn').dataset.id = record.id;
+        
+        // --- 3. '판매' 기록일 경우, 상세 정보 행을 채우고 보여주기 ---
+        const plCell = mainRow.querySelector('.record-pl');
         if (record.type === 'sell' && record.linked_buy_id) {
             const originalBuy = allRecordsForFilter.find(r => r.id.toString() === record.linked_buy_id.toString());
             if (originalBuy) {
                 const profit = record.base_amount - originalBuy.base_amount;
                 plCell.textContent = Math.round(profit).toLocaleString();
                 plCell.classList.add(profit >= 0 ? 'profit' : 'loss');
+
+                const detailsCell = detailsRow.querySelector('.linked-buy-details');
+                // ... renderRecords 함수 내부 ...
+                detailsCell.textContent = 
+                    `매수 정보: ${originalBuy.timestamp.substring(0, 10)} / ${originalBuy.trader} / ${originalBuy.target_currency} ${formatNumber(Number(originalBuy.foreign_amount).toFixed(2))} (환율: ${formatNumber(Number(originalBuy.exchange_rate).toFixed(2))})`;
+                // ...
+                detailsRow.classList.remove('hidden');
             }
+        } else {
+            // --- 4. '구매' 기록일 경우, 불필요한 상세 정보 행을 템플릿에서 제거 ---
+            detailsRow.remove();
         }
-        row.querySelector('.edit-btn').dataset.id = record.id;
-        row.querySelector('.delete-btn').dataset.id = record.id;
-        recordListBody.appendChild(row);
+        
+        // --- 5. 최종적으로 준비된 내용(행 1개 또는 2개)을 테이블에 한번에 추가 ---
+        recordListBody.appendChild(templateContent);
     });
 }
 
+// ... 나머지 함수 및 이벤트 리스너들은 이전과 동일 ...
 function updateAvailableBuyOptions() {
     const soldBuyIds = new Set(allRecordsForFilter.filter(r => r.type === 'sell' && r.linked_buy_id).map(r => r.linked_buy_id.toString()));
     const selectedTrader = document.querySelector('input[name="trader"]:checked')?.value;

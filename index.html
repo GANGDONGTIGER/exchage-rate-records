@@ -220,22 +220,25 @@
         </main>
     </div>
 
-    <template id="record-row-template">
-        <tr>
-            <td class="record-type"></td>
-            <td class="record-trader"></td>
-            <td class="record-date"></td>
-            <td class="record-currency"></td>
-            <td class="record-foreign-amount"></td>
-            <td class="record-rate"></td>
-            <td class="record-base-amount"></td>
-            <td class="record-pl"></td>
-            <td class="record-actions">
-                <button class="edit-btn" title="수정">✏️</button>
-                <button class="delete-btn" title="삭제">🗑️</button>
-            </td>
-        </tr>
-    </template>
+<template id="record-row-template">
+    <tr class="main-record-row"> <td class="record-type"></td>
+        <td class="record-trader"></td>
+        <td class="record-date"></td>
+        <td class="record-currency"></td>
+        <td class="record-foreign-amount"></td>
+        <td class="record-rate"></td>
+        <td class="record-base-amount"></td>
+        <td class="record-pl"></td>
+        <td class="record-actions">
+            <button class="edit-btn" title="수정">✏️</button>
+            <button class="delete-btn" title="삭제">🗑️</button>
+        </td>
+    </tr>
+    <tr class="linked-buy-row hidden">
+        <td class="link-arrow">└</td>
+        <td colspan="8" class="linked-buy-details"></td>
+    </tr>
+</template>
 
 </body>
 </html>

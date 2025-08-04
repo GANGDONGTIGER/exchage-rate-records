@@ -112,22 +112,31 @@ button[type="submit"]:hover {
     width: 120px; 
 }
 
-/* 라디오 버튼 그룹 스타일 */
-.radio-group {
+/* [수정] 거래자 선택 버튼 그룹 스타일 */
+.button-group {
     display: flex;
-    align-items: center;
-    gap: 15px;
+    gap: 8px;
+    flex-grow: 1;
 }
-.radio-group input[type="radio"] {
-    width: auto;
-    height: auto;
-    flex-grow: 0;
-}
-.radio-group label {
-    width: auto !important;
-    margin-bottom: 0 !important;
-    font-weight: normal;
+.btn-trader {
+    flex: 1;
+    padding: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    color: #555;
+    border-radius: 4px;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-trader:hover {
+    background-color: #e0e0e0;
+}
+.btn-trader.active {
+    background-color: #34495e;
+    color: white;
+    border-color: #34495e;
 }
 
 /* 대시보드 섹션 스타일 */

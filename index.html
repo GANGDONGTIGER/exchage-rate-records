@@ -19,6 +19,38 @@
         </header>
 
         <main>
+            <section class="calculator-section">
+                <button id="toggle-calculator-btn" class="accordion-toggle" aria-expanded="false">
+                    환율 계산기 열기 <span>▼</span>
+                </button>
+                <div id="calculator-content" class="hidden">
+                    <div class="calculator-inputs">
+                        <div class="form-group">
+                            <label>거래자</label>
+                            <div class="button-group" id="calc-trader-selector">
+                                <button type="button" class="btn-trader" data-value="SW">SW</button>
+                                <button type="button" class="btn-trader" data-value="HR">HR</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="calc-buy-select">매수 건 선택</label>
+                            <select id="calc-buy-select">
+                                <option value="">-- 거래자를 먼저 선택하세요 --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="calc-results-container" class="hidden">
+                        <div class="chart-group">
+                            <h4>수익 시나리오</h4>
+                            <div class="chart-container" id="profit-chart-container"></div>
+                        </div>
+                        <div class="chart-group">
+                            <h4>손실 시나리오</h4>
+                            <div class="chart-container" id="loss-chart-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
             <section class="form-section">
                 <form id="exchange-form">
                     <fieldset>
@@ -26,11 +58,9 @@
                         
                         <div class="form-group">
                             <label>거래자</label>
-                            <div class="radio-group">
-                                <input type="radio" id="trader-sw" name="trader" value="SW">
-                                <label for="trader-sw"><b>SW</b></label>
-                                <input type="radio" id="trader-hr" name="trader" value="HR">
-                                <label for="trader-hr"><b>HR</b></label>
+                            <div class="button-group" id="trader-selector">
+                                <button type="button" class="btn-trader" data-value="SW">SW</button>
+                                <button type="button" class="btn-trader" data-value="HR">HR</button>
                             </div>
                         </div>
 
@@ -49,8 +79,8 @@
                             <div class="form-group">
                                 <label for="transaction-type">거래 종류</label>
                                 <select id="transaction-type" name="type">
-                                    <option value="buy">외화 매수 (원화 → 외화)</option>
-                                    <option value="sell">외화 매도 (외화 → 원화)</option>
+                                    <option value="buy">외화 매수</option>
+                                    <option value="sell">외화 매도</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -153,41 +183,7 @@
                 </div>
             </section>
 
-            <section class="calculator-section">
-                <button id="toggle-calculator-btn" class="accordion-toggle" aria-expanded="false">
-                    환율 계산기 열기 <span>▼</span>
-                </button>
-                <div id="calculator-content" class="hidden">
-                    <div class="calculator-inputs">
-                        <div class="form-group">
-                            <label>거래자</label>
-                            <div class="radio-group">
-                                <input type="radio" id="calc-trader-sw" name="calc-trader" value="SW">
-                                <label for="calc-trader-sw"><b>SW</b></label>
-                                <input type="radio" id="calc-trader-hr" name="calc-trader" value="HR"> <label for="calc-trader-hr"><b>HR</b></label>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label for="calc-buy-select">매수 건 선택</label>
-                            <select id="calc-buy-select">
-                                <option value="">-- 거래자를 먼저 선택하세요 --</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="calc-results-container" class="hidden">
-                        <div class="chart-group">
-                            <h4>수익 시나리오</h4>
-                            <div class="chart-container" id="profit-chart-container">
-                                </div>
-                        </div>
-                        <div class="chart-group">
-                            <h4>손실 시나리오</h4>
-                            <div class="chart-container" id="loss-chart-container">
-                                </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            
             
             <section class="list-section">
                 <h2>거래 히스토리</h2>
@@ -215,6 +211,7 @@
                     </table>
                 </div>
             </section>
+
             <div class="pagination-controls">
                 <button id="prev-page-btn" disabled>이전</button>
                 <span id="page-info">Page 1 / 1</span>
@@ -224,7 +221,8 @@
     </div>
 
 <template id="record-row-template">
-    <tr class="main-record-row"> <td class="record-type"></td>
+    <tr class="main-record-row">
+        <td class="record-type"></td>
         <td class="record-trader"></td>
         <td class="record-date"></td>
         <td class="record-currency"></td>

@@ -30,13 +30,15 @@ const monthlyLimitHrText = document.getElementById('monthly-limit-hr-text');
 const toggleCalculatorBtn = document.getElementById('toggle-calculator-btn');
 const calculatorContent = document.getElementById('calculator-content');
 const calcTraderRadios = document.querySelectorAll('input[name="calc-trader"]');
-const calcBuySelect = document.getElementById('calc-buy-select');
 const calcResultsContainer = document.getElementById('calc-results-container');
 const profitChartContainer = document.getElementById('profit-chart-container');
 const lossChartContainer = document.getElementById('loss-chart-container');
 const prevPageBtn = document.getElementById('prev-page-btn');
 const nextPageBtn = document.getElementById('next-page-btn');
 const pageInfoSpan = document.getElementById('page-info');
+const traderSelector = document.getElementById('trader-selector');
+const calcTraderSelector = document.getElementById('calc-trader-selector');
+const calcBuySelect = document.getElementById('calc-buy-select');
 
 // ---------------------------------
 // 2. 전역 데이터 변수 및 상태
@@ -44,14 +46,13 @@ const pageInfoSpan = document.getElementById('page-info');
 let records = [];
 let allRecordsForFilter = [];
 let monthlyPlData = {};
+let currentTraderFilter = 'all';
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw0skZAuWgTMGOuTehPepXfIbUihjagRDQfTVaFHVjWbVC2JqRkTNNxGVtE9DMuaHi6cA/exec";
 let editMode = { active: false, recordId: null };
 let currentPage = 1;
 let totalRecords = 0;
 const RECORDS_PER_PAGE = 50;
 let isLoading = false;
-let currentTraderFilter = 'all'; // [추가] 현재 선택된 거래자 필터 ('all', 'SW', 'HR')
-
 
 // ---------------------------------
 // 3. 헬퍼(Helper) 함수
@@ -146,30 +147,25 @@ function displaySelectedMonthlyPL() {
     monthlyPlResult.className = profit >= 0 ? 'profit' : 'loss';
 }
 
-// ... 파일 상단 및 다른 함수들은 이전과 동일 ...
-
 function renderRecords(soldBuyIds = new Set()) {
     recordListBody.innerHTML = '';
-
     const recordsToRender = (currentTraderFilter === 'all')
         ? records
         : records.filter(r => r.trader === currentTraderFilter);
-
     recordsToRender.forEach(record => {
-        // 1. 템플릿에서 모든 요소(<tr> 2개)를 복제합니다.
         const templateContent = recordRowTemplate.content.cloneNode(true);
         const mainRow = templateContent.querySelector('.main-record-row');
         const detailsRow = templateContent.querySelector('.linked-buy-row');
-        
-        // --- 2. 메인 행(mainRow) 데이터 채우기 (이전과 동일) ---
         if ((record.type === 'sell' && record.linked_buy_id) || (record.type === 'buy' && soldBuyIds.has(record.id.toString()))) {
             mainRow.classList.add('record-completed');
         }
         const typeCell = mainRow.querySelector('.record-type');
         if (record.type === 'buy') {
-            typeCell.textContent = '매수'; typeCell.style.color = '#3498db';
+            typeCell.textContent = '매수';
+            typeCell.style.color = '#3498db';
         } else {
-            typeCell.textContent = '매도'; typeCell.style.color = '#e74c3c';
+            typeCell.textContent = '매도';
+            typeCell.style.color = '#e74c3c';
         }
         mainRow.querySelector('.record-trader').textContent = record.trader || '-';
         mainRow.querySelector('.record-date').textContent = record.timestamp.substring(0, 10);
@@ -179,8 +175,6 @@ function renderRecords(soldBuyIds = new Set()) {
         mainRow.querySelector('.record-base-amount').textContent = Math.round(record.base_amount).toLocaleString();
         mainRow.querySelector('.edit-btn').dataset.id = record.id;
         mainRow.querySelector('.delete-btn').dataset.id = record.id;
-        
-        // --- 3. '판매' 기록일 경우, 상세 정보 행을 채우고 보여주기 ---
         const plCell = mainRow.querySelector('.record-pl');
         if (record.type === 'sell' && record.linked_buy_id) {
             const originalBuy = allRecordsForFilter.find(r => r.id.toString() === record.linked_buy_id.toString());
@@ -188,28 +182,21 @@ function renderRecords(soldBuyIds = new Set()) {
                 const profit = record.base_amount - originalBuy.base_amount;
                 plCell.textContent = Math.round(profit).toLocaleString();
                 plCell.classList.add(profit >= 0 ? 'profit' : 'loss');
-
                 const detailsCell = detailsRow.querySelector('.linked-buy-details');
-                // ... renderRecords 함수 내부 ...
-                detailsCell.textContent = 
-                    `매수 정보: ${originalBuy.timestamp.substring(0, 10)} / ${originalBuy.trader} / ${originalBuy.target_currency} ${formatNumber(Number(originalBuy.foreign_amount).toFixed(2))} (환율: ${formatNumber(Number(originalBuy.exchange_rate).toFixed(2))})`;
-                // ...
+                detailsCell.textContent = `매수 정보: ${originalBuy.timestamp.substring(0, 10)} / ${originalBuy.trader} / ${originalBuy.target_currency} ${formatNumber(Number(originalBuy.foreign_amount).toFixed(2))} (환율: ${formatNumber(Number(originalBuy.exchange_rate).toFixed(2))})`;
                 detailsRow.classList.remove('hidden');
             }
         } else {
-            // --- 4. '구매' 기록일 경우, 불필요한 상세 정보 행을 템플릿에서 제거 ---
             detailsRow.remove();
         }
-        
-        // --- 5. 최종적으로 준비된 내용(행 1개 또는 2개)을 테이블에 한번에 추가 ---
         recordListBody.appendChild(templateContent);
     });
 }
 
-// ... 나머지 함수 및 이벤트 리스너들은 이전과 동일 ...
 function updateAvailableBuyOptions() {
     const soldBuyIds = new Set(allRecordsForFilter.filter(r => r.type === 'sell' && r.linked_buy_id).map(r => r.linked_buy_id.toString()));
-    const selectedTrader = document.querySelector('input[name="trader"]:checked')?.value;
+    const selectedTrader = traderSelector.querySelector('.btn-trader.active')?.dataset.value;
+    
     let availableBuyRecords = [];
     if (selectedTrader) {
         availableBuyRecords = allRecordsForFilter.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()) && r.trader === selectedTrader);
@@ -254,12 +241,15 @@ function resetFormToCreateMode() {
     transactionDateInput.value = getTodayString();
     editMode = { active: false, recordId: null };
     form.querySelector('button[type="submit"]').textContent = '저장';
+    // [추가] 폼 리셋 시, 거래자 버튼의 활성 상태도 제거
+    traderSelector.querySelectorAll('.btn-trader').forEach(btn => btn.classList.remove('active'));
     handleTransactionTypeChange();
 }
 
 function updateCalculatorBuyOptions() {
     const soldBuyIds = new Set(allRecordsForFilter.filter(r => r.type === 'sell' && r.linked_buy_id).map(r => r.linked_buy_id.toString()));
-    const selectedTrader = document.querySelector('input[name="calc-trader"]:checked')?.value;
+    const selectedTrader = calcTraderSelector.querySelector('.btn-trader.active')?.dataset.value;
+
     let availableBuyRecords = [];
     if (selectedTrader) {
         availableBuyRecords = allRecordsForFilter.filter(r => r.type === 'buy' && !soldBuyIds.has(r.id.toString()) && r.trader === selectedTrader);
@@ -409,6 +399,18 @@ document.querySelectorAll('input[name="trader"]').forEach(radio => {
         }
     });
 });
+document.querySelector('.filter-controls').addEventListener('click', (event) => {
+    if (event.target.tagName === 'BUTTON' && event.target.classList.contains('filter-btn')) {
+        const selectedTrader = event.target.dataset.trader;
+        currentTraderFilter = selectedTrader;
+        document.querySelectorAll('.filter-controls .filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        const soldBuyIds = new Set(allRecordsForFilter.filter(r => r.type === 'sell' && r.linked_buy_id).map(r => r.linked_buy_id.toString()));
+        renderRecords(soldBuyIds);
+    }
+});
 recordListBody.addEventListener('click', function(event) {
     const button = event.target.closest('button');
     if (!button) return;
@@ -423,6 +425,9 @@ recordListBody.addEventListener('click', function(event) {
         }
         if (recordToHandle.trader) {
             document.querySelector(`input[name="trader"][value="${recordToHandle.trader}"]`).checked = true;
+            traderSelector.querySelectorAll('.btn-trader').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === recordToHandle.trader);
+            });
         }
         targetCurrencySelect.value = recordToHandle.target_currency;
         transactionTypeSelect.value = recordToHandle.type;
@@ -431,9 +436,6 @@ recordListBody.addEventListener('click', function(event) {
         exchangeRateInput.value = formatNumber(recordToHandle.exchange_rate);
         baseAmountInput.value = formatNumber(recordToHandle.base_amount);
         handleTransactionTypeChange();
-        if (recordToHandle.type === 'sell' && recordToHandle.linked_buy_id) {
-            setTimeout(() => { linkedBuyIdSelect.value = recordToHandle.linked_buy_id; }, 100);
-        }
         editMode = { active: true, recordId: recordId };
         form.querySelector('button[type="submit"]').textContent = '수정 완료';
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -457,10 +459,10 @@ recordListBody.addEventListener('click', function(event) {
 form.addEventListener('submit', function(event) {
     event.preventDefault();
     const submitButton = form.querySelector('button[type="submit"]');
-    const selectedTrader = document.querySelector('input[name="trader"]:checked');
+    const selectedTrader = traderSelector.querySelector('.btn-trader.active')?.dataset.value;
     if (!selectedTrader) {
         alert('거래자를 선택해주세요.');
-        return;
+        return; // 버튼 상태 복구 로직이 필요하면 추가
     }
     submitButton.disabled = true;
     submitButton.textContent = '저장 중...';
@@ -478,7 +480,7 @@ form.addEventListener('submit', function(event) {
     }
     const recordData = {
         id: recordId,
-        trader: selectedTrader.value,
+        trader: selectedTrader,
         type: transactionTypeSelect.value,
         timestamp: timestamp,
         target_currency: targetCurrencySelect.value,
@@ -520,30 +522,24 @@ nextPageBtn.addEventListener('click', () => {
         fetchRecords(currentPage + 1);
     }
 });
-// [추가] 거래 히스토리 필터 버튼 이벤트 리스너
-document.querySelector('.filter-controls').addEventListener('click', (event) => {
-    if (event.target.classList.contains('filter-btn')) {
-        const selectedTrader = event.target.dataset.trader;
-
-        // 1. 전역 필터 상태 업데이트
-        currentTraderFilter = selectedTrader;
-
-        // 2. 모든 버튼에서 'active' 클래스 제거 후, 클릭된 버튼에만 추가
-        document.querySelectorAll('.filter-controls .filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        event.target.classList.add('active');
-
-        // 3. 필터링된 데이터로 테이블 다시 그리기
-        // renderRecords는 현재 페이지 데이터(records)를 사용하므로,
-        // 전체 분석 데이터에서 soldBuyIds만 다시 가져와서 전달합니다.
-        // [수정] soldBuyIds를 allRecordsForFilter에서 직접 계산합니다.
-        const soldBuyIds = new Set(
-            allRecordsForFilter
-                .filter(r => r.type === 'sell' && r.linked_buy_id)
-                .map(r => r.linked_buy_id.toString())
-        );
-        renderRecords(soldBuyIds);
+traderSelector.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target.classList.contains('btn-trader')) {
+        traderSelector.querySelectorAll('.btn-trader').forEach(btn => btn.classList.remove('active'));
+        target.classList.add('active');
+        
+        if (transactionTypeSelect.value === 'sell') {
+            updateAvailableBuyOptions();
+        }
+    }
+});
+calcTraderSelector.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target.classList.contains('btn-trader')) {
+        calcTraderSelector.querySelectorAll('.btn-trader').forEach(btn => btn.classList.remove('active'));
+        target.classList.add('active');
+        updateCalculatorBuyOptions();
+        renderCalculatorCharts(null);
     }
 });
 
@@ -563,15 +559,12 @@ function fetchRecords(page = 1) {
             return response.json();
         })
         .then(res => {
-            // 백엔드 응답 구조 확인
             if (!res || typeof res.analytics === 'undefined' || !Array.isArray(res.records)) {
                 throw new TypeError("서버로부터 받은 데이터 형식이 올바르지 않습니다.");
             }
-            
             records = res.records;
             totalRecords = res.totalRecords;
             allRecordsForFilter = res.allRecordsForFilter;
-            
             currentPage = page;
             renderAll(res);
         })

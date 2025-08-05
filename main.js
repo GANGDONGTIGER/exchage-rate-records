@@ -290,8 +290,8 @@ function renderCalculatorCharts(buyRecordId) {
     if (baseRate === 0 || foreignAmount === 0) return;
     const scenarios = [];
     for (let i = 1; i <= 5; i++) {
-        scenarios.push(Math.round(baseRate) + i);
-        scenarios.push(Math.round(baseRate) - i);
+        scenarios.push(baseRate + i);
+        scenarios.push(baseRate - i);
     }
     let maxAbsPL = 0;
     const chartData = scenarios.map(sellRate => {

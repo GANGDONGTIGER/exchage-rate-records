@@ -60,30 +60,31 @@
                             <label>거래자</label>
                             <div class="button-group" id="trader-selector">
                                 <button type="button" class="btn-trader" data-value="SW">SW</button>
-                                <button type="button" class="btn-trader" data-value="HR">HR</button>
+                                <button type="button" class="btn-trader" data-value="HR">HL</button>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="target-currency">거래 통화</label>
-                            <select id="target-currency" name="target_currency">
-                                <option value="USD">USD - 미국 달러</option>
-                                <option value="JPY">JPY - 일본 엔</option>
-                                <option value="EUR">EUR - 유로</option>
-                                <option value="CAD">CAD - 캐나다 달러</option>
-                                <option value="AUD">AUD - 호주 달러</option>
-                                <option value="NZD">NZD - 뉴질랜드 달러</option>
-                                <option value="HKD">HKD - 홍콩 달러</option>
-                                <option value="SGD">SGD - 싱가폴 달러</option>
-                            </select>
+                            <label>거래 통화</label>
+                            <div class="button-group" id="currency-selector">
+                                <button type="button" class="btn-currency" data-value="USD">USD</button>
+                                <button type="button" class="btn-currency" data-value="JPY">JPY</button>
+                                <button type="button" class="btn-currency" data-value="EUR">EUR</button>
+                                <button type="button" class="btn-currency" data-value="CAD">CAD</button>
+                                <button type="button" class="btn-currency" data-value="AUD">AUD</button>
+                                <button type="button" class="btn-currency" data-value="NZD">NZD</button>
+                                <button type="button" class="btn-currency" data-value="HKD">HKD</button>
+                                <button type="button" class="btn-currency" data-value="SGD">SGD</button>
+                            </div>
                         </div>
+
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="transaction-type">거래 종류</label>
-                                <select id="transaction-type" name="type">
-                                    <option value="buy">외화 매수</option>
-                                    <option value="sell">외화 매도</option>
-                                </select>
+                                <label>거래 종류</label>
+                                <div class="button-group" id="type-selector">
+                                    <button type="button" class="btn-type active" data-value="buy">외화 매수</button>
+                                    <button type="button" class="btn-type" data-value="sell">외화 매도</button>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label for="transaction-date">거래 날짜</label>

@@ -117,9 +117,11 @@ button[type="submit"]:hover {
     display: flex;
     gap: 8px;
     flex-grow: 1;
+    flex-wrap: wrap;
 }
-.btn-trader {
-    flex: 1;
+.btn-trader,
+.btn-type,
+.btn-currency {
     padding: 8px;
     font-size: 1em;
     font-weight: bold;
@@ -130,10 +132,29 @@ button[type="submit"]:hover {
     cursor: pointer;
     transition: all 0.2s ease;
 }
-.btn-trader:hover {
+
+/* [추가] 2개짜리 버튼은 flex: 1로 공간 채우기 */
+.btn-trader,
+.btn-type {
+    flex: 1;
+}
+/* [추가] 통화 버튼은 고유 크기 가짐 */
+.btn-currency {
+    flex-grow: 1; /* 공간이 남으면 채우되 */
+    flex-basis: 80px; /* 기본 너비 */
+    text-align: center;
+}
+
+/* [수정] hover 및 active 스타일을 모든 버튼에 적용 */
+.btn-trader:hover,
+.btn-type:hover,
+.btn-currency:hover {
     background-color: #e0e0e0;
 }
-.btn-trader.active {
+
+.btn-trader.active,
+.btn-type.active,
+.btn-currency.active {
     background-color: #34495e;
     color: white;
     border-color: #34495e;

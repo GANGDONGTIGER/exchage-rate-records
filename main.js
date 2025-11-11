@@ -5,8 +5,9 @@ const form = document.getElementById('exchange-form');
 const recordListBody = document.getElementById('record-list-body');
 const recordRowTemplate = document.getElementById('record-row-template');
 const loadingOverlay = document.getElementById('loading-overlay');
-const targetCurrencySelect = document.getElementById('target-currency');
-const transactionTypeSelect = document.getElementById('transaction-type');
+// [수정] <select>가 아닌 버튼 컨테이너(div)를 가리킴
+const currencySelector = document.getElementById('currency-selector');
+const typeSelector = document.getElementById('type-selector');
 const transactionDateInput = document.getElementById('transaction-date');
 const foreignAmountInput = document.getElementById('foreign-amount');
 const exchangeRateInput = document.getElementById('exchange-rate');
@@ -72,6 +73,26 @@ function formatNumber(value) {
 }
 function unformatNumber(stringValue) {
     return stringValue.toString().replace(/,/g, '');
+}
+
+// [추가] 버튼 그룹의 값을 가져오는 헬퍼 함수
+function getSelectedCurrency() {
+    return currencySelector.querySelector('.btn-currency.active')?.dataset.value;
+}
+function getSelectedType() {
+    return typeSelector.querySelector('.btn-type.active')?.dataset.value;
+}
+
+// [추가] 버튼 그룹의 값을 설정하는 헬퍼 함수
+function setSelectedCurrency(value) {
+    currencySelector.querySelectorAll('.btn-currency').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.value === value);
+    });
+}
+function setSelectedType(value) {
+    typeSelector.querySelectorAll('.btn-type').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.value === value);
+    });
 }
 
 // ---------------------------------
@@ -214,7 +235,8 @@ function updateAvailableBuyOptions() {
 function calculateBaseAmount() {
     const foreignAmount = parseFloat(unformatNumber(foreignAmountInput.value));
     const exchangeRate = parseFloat(unformatNumber(exchangeRateInput.value));
-    const selectedCurrency = targetCurrencySelect.value;
+    // [수정] 헬퍼 함수 사용
+    const selectedCurrency = getSelectedCurrency(); 
     if (!isNaN(foreignAmount) && !isNaN(exchangeRate)) {
         let calculatedAmount = foreignAmount * exchangeRate;
         if (selectedCurrency === 'JPY') {
@@ -227,7 +249,8 @@ function calculateBaseAmount() {
 }
 
 function handleTransactionTypeChange() {
-    if (transactionTypeSelect.value === 'sell') {
+    // [수정] 헬퍼 함수 사용
+    if (getSelectedType() === 'sell') {
         linkedBuyIdWrapper.classList.remove('hidden');
         updateAvailableBuyOptions();
     } else {
@@ -241,8 +264,13 @@ function resetFormToCreateMode() {
     transactionDateInput.value = getTodayString();
     editMode = { active: false, recordId: null };
     form.querySelector('button[type="submit"]').textContent = '저장';
-    // [추가] 폼 리셋 시, 거래자 버튼의 활성 상태도 제거
     traderSelector.querySelectorAll('.btn-trader').forEach(btn => btn.classList.remove('active'));
+    
+    // [추가] 버튼 그룹 초기화
+    setSelectedType('buy');
+    setSelectedCurrency(null); // 통화는 선택 안 함 (또는 기본값 'USD' 설정)
+    // setSelectedCurrency('USD'); // 이쪽을 활성화하면 USD가 기본 선택됩니다.
+
     handleTransactionTypeChange();
 }
 
@@ -348,7 +376,32 @@ function renderPagination() {
 // ---------------------------------
 // 5. 이벤트 리스너
 // ---------------------------------
-transactionTypeSelect.addEventListener('change', handleTransactionTypeChange);
+
+// [수정] 'change' 이벤트 대신 'click' 이벤트로 버튼 그룹 처리
+typeSelector.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target.classList.contains('btn-type')) {
+        // 'active' 클래스 관리
+        typeSelector.querySelectorAll('.btn-type').forEach(btn => btn.classList.remove('active'));
+        target.classList.add('active');
+        // 기존 함수 호출
+        handleTransactionTypeChange();
+    }
+});
+
+// [추가] 통화 버튼 그룹 클릭 리스너
+currencySelector.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target.classList.contains('btn-currency')) {
+        // 'active' 클래스 관리
+        currencySelector.querySelectorAll('.btn-currency').forEach(btn => btn.classList.remove('active'));
+        target.classList.add('active');
+        // 통화가 바뀌면(특히 JPY) 원화 계산을 다시 해야 함
+        calculateBaseAmount();
+    }
+});
+
+
 monthlyPlSelect.addEventListener('change', displaySelectedMonthlyPL);
 toggleCalculatorBtn.addEventListener('click', function() {
     const isExpanded = this.getAttribute('aria-expanded') === 'true';
@@ -379,13 +432,19 @@ linkedBuyIdSelect.addEventListener('change', function() {
         calculateBaseAmount();
     }
 });
+
+// [수정] <input type="radio">가 아니므로 이 리스너는 제거하거나 수정해야 함.
+// [수정] 이 기능은 traderSelector의 'click' 리스너 (하단에 있음)로 대체됨.
+/*
 document.querySelectorAll('input[name="trader"]').forEach(radio => {
     radio.addEventListener('change', () => {
-        if (transactionTypeSelect.value === 'sell') {
+        if (getSelectedType() === 'sell') {
             updateAvailableBuyOptions();
         }
     });
 });
+*/
+
 [foreignAmountInput, exchangeRateInput, baseAmountInput].forEach(input => {
     input.addEventListener('input', (e) => {
         const rawValue = unformatNumber(e.target.value);
@@ -423,18 +482,20 @@ recordListBody.addEventListener('click', function(event) {
             alert("안정적인 데이터 관리를 위해 '판매' 기록은 수정할 수 없습니다.");
             return;
         }
+        // [수정] 폼에 값을 세팅할 때 헬퍼 함수 사용
         if (recordToHandle.trader) {
-            document.querySelector(`input[name="trader"][value="${recordToHandle.trader}"]`).checked = true;
+            // document.querySelector(`input[name="trader"][value="${recordToHandle.trader}"]`).checked = true; // 라디오 버튼이 아님
             traderSelector.querySelectorAll('.btn-trader').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.value === recordToHandle.trader);
             });
         }
-        targetCurrencySelect.value = recordToHandle.target_currency;
-        transactionTypeSelect.value = recordToHandle.type;
+        setSelectedCurrency(recordToHandle.target_currency);
+        setSelectedType(recordToHandle.type);
         transactionDateInput.value = recordToHandle.timestamp.substring(0, 10);
         foreignAmountInput.value = formatNumber(recordToHandle.foreign_amount);
         exchangeRateInput.value = formatNumber(recordToHandle.exchange_rate);
         baseAmountInput.value = formatNumber(recordToHandle.base_amount);
+
         handleTransactionTypeChange();
         editMode = { active: true, recordId: recordId };
         form.querySelector('button[type="submit"]').textContent = '수정 완료';
@@ -459,11 +520,26 @@ recordListBody.addEventListener('click', function(event) {
 form.addEventListener('submit', function(event) {
     event.preventDefault();
     const submitButton = form.querySelector('button[type="submit"]');
+    
+    // [수정] 헬퍼 함수로 값 가져오기
     const selectedTrader = traderSelector.querySelector('.btn-trader.active')?.dataset.value;
+    const selectedType = getSelectedType();
+    const selectedCurrency = getSelectedCurrency();
+
     if (!selectedTrader) {
         alert('거래자를 선택해주세요.');
-        return; // 버튼 상태 복구 로직이 필요하면 추가
+        return;
     }
+    // [추가] 버튼 그룹 유효성 검사
+    if (!selectedType) {
+        alert('거래 종류를 선택해주세요.');
+        return;
+    }
+    if (!selectedCurrency) {
+        alert('거래 통화를 선택해주세요.');
+        return;
+    }
+
     submitButton.disabled = true;
     submitButton.textContent = '저장 중...';
     loadingOverlay.classList.remove('hidden');
@@ -478,17 +554,20 @@ form.addEventListener('submit', function(event) {
     } else {
         timestamp = new Date().toISOString();
     }
+
+    // [수정] 헬퍼 함수로 가져온 값 사용
     const recordData = {
         id: recordId,
         trader: selectedTrader,
-        type: transactionTypeSelect.value,
+        type: selectedType,
         timestamp: timestamp,
-        target_currency: targetCurrencySelect.value,
+        target_currency: selectedCurrency,
         foreign_amount: parseFloat(unformatNumber(foreignAmountInput.value)),
         exchange_rate: parseFloat(unformatNumber(exchangeRateInput.value)),
         base_amount: parseInt(unformatNumber(baseAmountInput.value), 10),
-        linked_buy_id: transactionTypeSelect.value === 'sell' ? linkedBuyIdSelect.value : null,
+        linked_buy_id: selectedType === 'sell' ? linkedBuyIdSelect.value : null,
     };
+
     fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: action, data: recordData }),
@@ -528,7 +607,8 @@ traderSelector.addEventListener('click', (event) => {
         traderSelector.querySelectorAll('.btn-trader').forEach(btn => btn.classList.remove('active'));
         target.classList.add('active');
         
-        if (transactionTypeSelect.value === 'sell') {
+        // [수정] 헬퍼 함수 사용
+        if (getSelectedType() === 'sell') {
             updateAvailableBuyOptions();
         }
     }
@@ -580,6 +660,11 @@ function fetchRecords(page = 1) {
 
 document.addEventListener('DOMContentLoaded', () => {
     transactionDateInput.value = getTodayString();
+    
+    // [추가] 초기 버튼 상태 설정 (HTML에도 .active를 추가했지만, JS로 명확히 해둠)
+    setSelectedType('buy');
+    // setSelectedCurrency('USD'); // 페이지 로드 시 USD를 기본 선택하려면 이 줄의 주석을 푸세요.
+
     if (SCRIPT_URL.includes("여기에_본인의_웹_앱_URL을_붙여넣어주세요")) {
         alert("main.js 파일의 SCRIPT_URL 변수에 본인의 웹 앱 URL을 먼저 입력해주세요!");
         return;

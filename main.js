@@ -54,6 +54,7 @@ let currentPage = 1;
 let totalRecords = 0;
 const RECORDS_PER_PAGE = 50;
 let isLoading = false;
+let trendChart = null; // [추가] 차트 인스턴스를 저장할 변수
 
 // ---------------------------------
 // 3. 헬퍼(Helper) 함수
@@ -109,6 +110,7 @@ function renderAll(response) {
     updateAvailableBuyOptions();
     updateCalculatorBuyOptions();
     renderPagination();
+    renderMonthlyTrendChart(response.analytics.monthlyPL);
 }
 
 function updateDashboard({ totalPL, currentMonthPL, holdings, avgBuyPrices, limitUsage }) {
@@ -373,6 +375,84 @@ function renderPagination() {
     nextPageBtn.disabled = currentPage >= totalPages;
 }
 
+// [추가] 월별 손익 추이 그래프 렌더링 함수
+function renderMonthlyTrendChart(monthlyData) {
+    const canvas = document.getElementById('monthlyTrendChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // 데이터 정렬 (과거 -> 현재 순)
+    const sortedMonths = Object.keys(monthlyData).sort();
+    const labels = sortedMonths.map(m => m.replace('-', '.'));
+    const dataPoints = sortedMonths.map(month => monthlyData[month]);
+
+    // 데이터 개수에 따라 가로 길이 동적 계산 (최소 너비 유지)
+    const chartContent = document.querySelector('.chart-content');
+    const containerWidth = chartContent.parentElement.clientWidth;
+    const minWidth = Math.max(containerWidth, labels.length * 60);
+    chartContent.style.width = `${minWidth}px`;
+
+    if (trendChart) trendChart.destroy();
+
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '월별 손익',
+                data: dataPoints,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                pointRadius: 5,
+                pointBackgroundColor: '#3498db',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+            padding: {
+                top: 30 // 숫자가 잘리지 않도록 상단 여백 추가
+                }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString() + '원' } }
+            },
+            plugins: {
+            legend: { display: false },
+            // [방법 1] 툴팁 항상 표시가 아닌, 차트 위에 직접 그리기 위한 커스텀 설정
+            },
+            animation: {
+            onComplete: function() {
+                const chartInstance = this;
+                const ctx = chartInstance.ctx;
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillStyle = '#2c3e50';
+
+                this.data.datasets.forEach(function(dataset, i) {
+                    const meta = chartInstance.getDatasetMeta(i);
+                    meta.data.forEach(function(element, index) {
+                        const data = dataset.data[index].toLocaleString() + '원';
+                        // 포인트 바로 위에 텍스트 배치
+                        ctx.fillText(data, element.x, element.y - 10);
+                                                            });
+                                                        });
+                                }
+                }
+        }
+    });
+
+    // 최신 데이터(오른쪽)로 자동 스크롤
+    setTimeout(() => {
+        const scrollContainer = document.querySelector('.chart-scroll-container');
+        if (scrollContainer) scrollContainer.scrollLeft = scrollContainer.scrollWidth;
+    }, 150);
+}
 // ---------------------------------
 // 5. 이벤트 리스너
 // ---------------------------------

@@ -667,3 +667,29 @@ button[type="submit"]:hover {
     max-width: 100%; /* 부모 컨테이너 너비에 맞춤 */
     box-sizing: border-box; /* 패딩과 보더가 너비에 포함되도록 */
 }
+
+/* 월별 손익 추이 섹션 스타일 */
+.trend-section {
+    margin-bottom: 40px;
+}
+.trend-section h2 {
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #eee;
+}
+
+/* 스크롤 가능한 차트 컨테이너 */
+.chart-wrapper {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #fff;
+    padding: 20px;
+}
+.chart-scroll-container {
+    width: 100%;
+    overflow-x: auto; /* 가로 스크롤 허용 */
+}
+.chart-content {
+    height: 300px; /* 그래프 높이 고정 */
+    min-width: 100%; /* 최소 너비 */
+}
